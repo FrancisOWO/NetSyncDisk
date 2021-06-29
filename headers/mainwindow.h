@@ -31,6 +31,7 @@ public:
     static const int STAT_REGISTER  = 1;
     static const int STAT_LOGIN     = 2;
     static const int STAT_UPFILE    = 3;
+    static const int STAT_UPSEG     = 4;
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -48,6 +49,8 @@ private:
     int m_userid;
     int m_fileid;
 
+    qint64 m_start_bit;
+
     QString m_username;
     QString m_file_path;
 
@@ -59,6 +62,7 @@ private:
 
     void parseLoginJson(const QString &str);
     void parseUpfileJson(const QString &str);
+    void parseUpfilesegJson(const QString &str);
 
 private slots:
     void connectServer();       //连接服务器
@@ -78,9 +82,9 @@ private slots:
     void upfileBySeg();         //分段上传文件
 
     void sendUpfileData(const QString &file_path);      //发送上传文件数据
-    void sendUpfilesegData(const QString &file_path, qint64 start_bit, int len);    //发送文件片段数据
+    void sendUpfilesegData(const QString &file_path, qint64 m_start_bit, int len);    //发送文件片段数据
 
-    //void sendRmfileData()
+    //void sendRmfileData();
 
     void setUsername();
 

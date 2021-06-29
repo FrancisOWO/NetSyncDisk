@@ -38,6 +38,8 @@ void MainWindow::InitMembers()
 {
     m_is_connected = 0;
     m_recv_status = 0;
+    m_start_bit = 0;
+
     m_userid = -1;
     m_fileid = -1;
 
@@ -188,10 +190,31 @@ void MainWindow::parseUpfileJson(const QString &str)
     }
     qDebug() << "function:" << recvJson["function"].asCString();
     qDebug() << "fileid:" << recvJson["fileid"].asInt();
+    qDebug() << "startbit:" << recvJson["startbit"].asInt();
 
     m_fileid = recvJson["fileid"].asInt();
+    m_start_bit = recvJson["startbit"].asInt();
     m_recv_status = STAT_WAIT;    //清标志位
 }
+
+void MainWindow::parseUpfilesegJson(const QString &str)
+{
+    Json::CharReaderBuilder reader;
+    Json::Value recvJson;
+    JSONCPP_STRING errs;
+    std::stringstream ss(str.toStdString());
+    bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
+    if (!res || !errs.empty()) {
+        qDebug() << "recv error!";
+        return;
+    }
+    qDebug() << "function:" << recvJson["function"].asCString();
+    //qDebug() << "startbit:" << recvJson["startbit"].asInt();
+
+    //m_start_bit = recvJson["startbit"].asInt();
+    m_recv_status = STAT_WAIT;     //清标志位
+}
+
 
 //接收数据
 void MainWindow::recvData()
@@ -217,6 +240,9 @@ void MainWindow::recvData()
     else if(STAT_UPFILE == m_recv_status){
         parseUpfileJson(str);
     }
+    //else if(STAT_UPSEG == m_recv_status){
+    //    parseUpfilesegJson(str);
+    //}
 }
 
 //打开注册页面s
@@ -327,18 +353,19 @@ void MainWindow::upfileBySeg()
 
     const int buf_len = 4096;
     int one_send_len = buf_len;
-    static qint64 start_bit = 0;
-    qint64 remain_len = total_len - start_bit;
+    qint64 remain_len = total_len - m_start_bit;
     if(remain_len > 0){
         if(one_send_len > remain_len)
             one_send_len = int(remain_len);
-        sendUpfilesegData(m_file_path, start_bit, one_send_len);
+        sendUpfilesegData(m_file_path, m_start_bit, one_send_len);
 
-        start_bit += one_send_len;
-        remain_len -= one_send_len;
+        //m_start_bit += one_send_len;
+        //remain_len -= one_send_len;
 
-        qDebug() << CStr2LocalQStr("已发送") << QString::number(start_bit) << CStr2LocalQStr("字节，剩余")
-                 << QString::number(remain_len) << CStr2LocalQStr("字节");
+        qDebug() << CStr2LocalQStr("已发送") << QString::number(m_start_bit + one_send_len)
+                 << CStr2LocalQStr("字节，剩余") << QString::number(remain_len - one_send_len)
+                 << CStr2LocalQStr("字节");
+        m_recv_status = STAT_UPSEG;
     }
     else {
         qDebug() << CStr2LocalQStr("上传完毕！");
@@ -349,7 +376,9 @@ void MainWindow::upfileBySeg()
 
         ui->txtSend->clear();
         m_file_path = "";
-        start_bit = 0;
+        m_start_bit = 0;
+
+        m_recv_status = STAT_WAIT;
     }
 }
 
