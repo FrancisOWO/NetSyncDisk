@@ -22,19 +22,22 @@ public:
     QString getRootDir();
 
 public slots:
+    void InitFolderTree();
     void updateFolderTree();
 
 private:
     Ui::FormFolder *ui;
-    QString root_dir;
+    QString m_root_dir;
+    bool m_autoUpd_flag;
 
-    QFileSystemWatcher *pFilesysWatcher;
+    QFileSystemWatcher *m_pFilesysWatcher;
 
 private:
     void InitMembers();
     void InitConnections();
 
     void addFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
+    void updateFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
 
 private slots:
     void changeRootDir();
@@ -43,6 +46,8 @@ private slots:
     void onDirChanged(const QString &path);
 
     void chooseFile();
+
+    void updateAutoUpdFlag();
 
 signals:
     void filechosen(const QString &file_path);

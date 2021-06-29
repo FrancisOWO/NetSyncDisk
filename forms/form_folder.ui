@@ -51,7 +51,7 @@
     <rect>
      <x>40</x>
      <y>30</y>
-     <width>503</width>
+     <width>511</width>
      <height>67</height>
     </rect>
    </property>
@@ -138,17 +138,16 @@
      </widget>
     </item>
     <item row="0" column="3">
-     <spacer name="horizontalSpacer">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+     <widget class="QCheckBox" name="chkAutoUpd">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
       </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>78</width>
-        <height>20</height>
-       </size>
+      <property name="text">
+       <string>自动刷新</string>
       </property>
-     </spacer>
+     </widget>
     </item>
    </layout>
   </widget>

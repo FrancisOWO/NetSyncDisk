@@ -45,10 +45,14 @@ void MainWindow::InitMembers()
     m_pLogin = new FormLogin;
     m_pFolder = new FormFolder;
 
-    ui->spinIP1->setValue(192);
-    ui->spinIP2->setValue(168);
-    ui->spinIP3->setValue(43);
-    ui->spinIP4->setValue(230);
+    //ui->spinIP1->setValue(192);
+    //ui->spinIP2->setValue(168);
+    //ui->spinIP3->setValue(43);
+    //ui->spinIP4->setValue(230);
+    ui->spinIP1->setValue(10);
+    ui->spinIP2->setValue(60);
+    ui->spinIP3->setValue(102);
+    ui->spinIP4->setValue(252);
 
     ui->spinPort->setValue(20230);
 
@@ -215,7 +219,7 @@ void MainWindow::recvData()
     }
 }
 
-//打开注册页面
+//打开注册页面s
 void MainWindow::openRegisterPage()
 {
     m_pRegister->show();
@@ -232,7 +236,7 @@ void MainWindow::openFolderPage()
 {
     QString root_dir = "E://test";
     m_pFolder->setRootDir(root_dir);
-    m_pFolder->updateFolderTree();
+    m_pFolder->InitFolderTree();
     m_pFolder->show();
 }
 
