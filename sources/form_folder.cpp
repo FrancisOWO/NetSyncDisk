@@ -1,13 +1,16 @@
 #include "form_folder.h"
 #include "ui_form_folder.h"
 
+#include <QStringList>
+#include <QMessageBox>
+#include <QCheckBox>
+
 #include <QDir>
 #include <QFileInfo>
 #include <QFileInfoList>
-#include <QStringList>
+#include <QFileDialog>
+
 #include <QDebug>
-#include <QMessageBox>
-#include <QCheckBox>
 
 #include "tools.h"
 
@@ -37,6 +40,7 @@ void FormFolder::InitMembers()
 
 void FormFolder::InitConnections()
 {
+    connect(ui->pbtnChooseRoot, SIGNAL(clicked()), this, SLOT(chooseRootDir()));
     connect(ui->pbtnChgRoot, SIGNAL(clicked()), this, SLOT(changeRootDir()));
     connect(ui->pbtnUpdFolder, SIGNAL(clicked()), this, SLOT(updateFolderTree()));
 
@@ -50,8 +54,13 @@ void FormFolder::InitConnections()
     connect(m_pFilesysWatcher, SIGNAL(directoryChanged(const QString &)),
             this, SLOT(onDirChanged(const QString &)));
 
+}
 
-
+void FormFolder::chooseRootDir()
+{
+    QString path = QFileDialog::getExistingDirectory(
+                nullptr, CStr2LocalQStr("ѡ�񶥲�Ŀ¼"), m_root_dir);
+    ui->lnRootDir->setText(path);
 }
 
 void FormFolder::changeRootDir()

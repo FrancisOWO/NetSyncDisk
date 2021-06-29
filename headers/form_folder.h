@@ -40,6 +40,7 @@ private:
     void updateFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
 
 private slots:
+    void chooseRootDir();
     void changeRootDir();
 
     void onFileChanged(const QString &path);

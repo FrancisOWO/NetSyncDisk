@@ -234,7 +234,7 @@ void MainWindow::openLoginPage()
 //打开目录页面
 void MainWindow::openFolderPage()
 {
-    QString root_dir = "E://test";
+    QString root_dir = "E:/test";
     m_pFolder->setRootDir(root_dir);
     m_pFolder->InitFolderTree();
     m_pFolder->show();
