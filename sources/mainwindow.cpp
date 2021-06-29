@@ -367,6 +367,7 @@ void MainWindow::sendUpfileData(const QString &file_path)
     QString file_md5 = getFileMD5(full_path);
 
     qDebug() <<"upfile...";
+    qDebug() <<"userid: "<< m_userid;
     qDebug() <<"path: "<< file_path;
     qDebug() <<"fullpath: "<< full_path;
     qDebug() <<"md5: "<< file_md5;
@@ -424,4 +425,20 @@ void MainWindow::sendUpfilesegData(const QString &file_path, qint64 start_bit, i
 void MainWindow::setUsername()
 {
     ui->lnUsername->setText(m_username);
+}
+
+//窗口关闭
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    //若用户为登录状态，发送退出信号
+    if(m_userid >= 0){
+        sendLogoutData();
+        sendData();
+    }
+    else {
+        sendLogoutData();
+        qDebug() << CStr2LocalQStr("用户已退出");
+    }
+    event->accept();
+    qDebug() << CStr2LocalQStr("主窗口关闭！");
 }

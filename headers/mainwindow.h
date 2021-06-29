@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QTcpSocket>
 #include <QString>
+#include <QCloseEvent>
+
 #include "form_register.h"
 #include "form_login.h"
 #include "form_folder.h"
@@ -29,6 +31,9 @@ public:
     static const int STAT_REGISTER  = 1;
     static const int STAT_LOGIN     = 2;
     static const int STAT_UPFILE    = 3;
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 
 private:
     Ui::MainWindow *ui;
