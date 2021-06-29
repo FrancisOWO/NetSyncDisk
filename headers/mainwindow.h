@@ -77,8 +77,10 @@ private slots:
 
     void upfileBySeg();         //分段上传文件
 
-    void sendUpfileData(const QString &m_file_path);      //发送上传文件数据
-    void sendUpfilesegData(const QString &m_file_path, qint64 start_bit, int len);    //发送文件片段数据
+    void sendUpfileData(const QString &file_path);      //发送上传文件数据
+    void sendUpfilesegData(const QString &file_path, qint64 start_bit, int len);    //发送文件片段数据
+
+    //void sendRmfileData()
 
     void setUsername();
 

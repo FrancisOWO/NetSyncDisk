@@ -120,12 +120,16 @@ void FormFolder::onFileChanged(const QString &path)
     if(!fileInfo.exists()){
         qDebug() << CStr2LocalQStr("删除文件！") << path;
         m_pFilesysWatcher->removePath(path);
-        if(m_autoUpd_flag){     //自动刷新
+        //## 同步：删除文件
+        emit rmfile(path);
+        //刷新目录树
+        if(m_autoUpd_flag)      //自动刷新
             updateFolderTree();
-        }
     }
     else {
         qDebug() << CStr2LocalQStr("修改文件！") << path;
+        //## 同步：上传文件
+        //emit upfile(path);
     }
 }
 
@@ -136,6 +140,8 @@ void FormFolder::onDirChanged(const QString &path)
     if(!dDir.exists()){
         qDebug() << CStr2LocalQStr("删除目录！") << path;
         m_pFilesysWatcher->removePath(path);
+        //## 同步：删除目录
+        emit rmdir(path);
     }
     else {
         //qDebug() << CStr2LocalQStr("修改目录！") << path;
@@ -157,7 +163,7 @@ void FormFolder::chooseFile()
     }
     //设置路径
     ui->lnFilePath->setText(file_path);
-    emit filechosen(file_path);
+    emit upfile(file_path);
 }
 
 void FormFolder::updateAutoUpdFlag()
@@ -171,7 +177,7 @@ void FormFolder::updateAutoUpdFlag()
 
 void FormFolder::InitFolderTree()
 {
-    qDebug() <<"初始化目录";
+    qDebug() << CStr2LocalQStr("初始化目录");
 
     ui->treeFolder->clear();    //清空目录
     ui->treeFolder->setHeaderHidden(true);      //隐藏表头
@@ -299,6 +305,7 @@ void FormFolder::updateFolderChilds(QTreeWidgetItem *pParent, const QString &abs
         if(!watch_files.contains(file_path)){
             qDebug() << CStr2LocalQStr("添加监视文件！") << file_path;
             m_pFilesysWatcher->addPath(file_path);        //添加监视
+            //## 空文件不同步
         }
 
     }
@@ -323,6 +330,8 @@ void FormFolder::updateFolderChilds(QTreeWidgetItem *pParent, const QString &abs
         if(!watch_dirs.contains(dir_path)){
             qDebug() << CStr2LocalQStr("添加监视目录！") << dir_path;
             m_pFilesysWatcher->addPath(dir_path);        //添加监视
+            //## 同步：新建目录
+            emit mkdir(dir_path);
         }
     }
 

@@ -76,7 +76,7 @@ void MainWindow::InitConnections()
     connect(m_pRegister, SIGNAL(completed()), this, SLOT(sendRegisterData()));
     connect(m_pLogin, SIGNAL(completed()), this, SLOT(sendLoginData()));
     connect(ui->pbtnLogout, SIGNAL(clicked()), this, SLOT(sendLogoutData()));
-    connect(m_pFolder, SIGNAL(filechosen(const QString &)),
+    connect(m_pFolder, SIGNAL(upfile(const QString &)),
             this, SLOT(sendUpfileData(const QString &)));
 
     //分段传文件

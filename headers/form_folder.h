@@ -50,7 +50,14 @@ private slots:
     void updateAutoUpdFlag();
 
 signals:
-    void filechosen(const QString &file_path);
+    void upfile(const QString &file_path);
+
+    //## 空文件不同步，无需mkfile
+    //void mkfile(const QString &file_path);    //新建文件
+    void rmfile(const QString &file_path);      //删除文件
+
+    void mkdir(const QString &dir_path);    //新建目录
+    void rmdir(const QString &dir_path);    //删除目录
 
 };
 
