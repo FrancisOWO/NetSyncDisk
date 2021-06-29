@@ -32,6 +32,9 @@ public:
     static const int STAT_LOGIN     = 2;
     static const int STAT_UPFILE    = 3;
     static const int STAT_UPSEG     = 4;
+    static const int STAT_RMFILE    = 5;
+    static const int STAT_MKDIR     = 6;
+    static const int STAT_RMDIR     = 7;
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -65,6 +68,8 @@ private:
     void parseUpfilesegJson(const QString &str);
 
 private slots:
+    void setUsername();
+
     void connectServer();       //连接服务器
     void disconnectServer();    //断开连接
 
@@ -75,18 +80,18 @@ private slots:
     void openLoginPage();
     void openFolderPage();
 
-    void sendRegisterData();    //发送注册数据
-    void sendLoginData();       //发送登录数据
-    void sendLogoutData();      //发送登出数据
+    void sendDataRegister();    //发送注册数据
+    void sendDataLogin();       //发送登录数据
+    void sendDataLogout();      //发送登出数据
 
     void upfileBySeg();         //分段上传文件
 
-    void sendUpfileData(const QString &file_path);      //发送上传文件数据
-    void sendUpfilesegData(const QString &file_path, qint64 m_start_bit, int len);    //发送文件片段数据
+    void sendDataUpfile(const QString &file_path);      //发送上传文件数据
+    void sendDataUpfileseg(const QString &file_path, qint64 m_start_bit, int len);    //发送文件片段数据
 
-    //void sendRmfileData();
-
-    void setUsername();
+    void sendDataRmfile(const QString &file_path);  //删除文件
+    void sendDataMkdir(const QString &dir_path);    //创建目录
+    void sendDataRmdir(const QString &dir_path);    //删除目录
 
 };
 #endif // MAINWINDOW_H

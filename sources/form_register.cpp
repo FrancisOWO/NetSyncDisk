@@ -48,7 +48,7 @@ int FormRegister::checkUname()
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("用户名长度应为") + QString::number(min_len)
                + "-" +  QString::number(max_len) + CStr2LocalQStr("位！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return ULimits::UNAME_ERRLEN;
     }
     //字符检查
@@ -56,7 +56,7 @@ int FormRegister::checkUname()
     if(!chk_ok){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("用户名不能含有数字、字母、下划线以外的字符！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return ULimits::UNAME_ERRCH;
     }
     return ULimits::UNAME_OK;
@@ -72,7 +72,7 @@ int FormRegister::checkPwd()
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("密码长度应为") + QString::number(min_len)
                + "-" +  QString::number(max_len) + CStr2LocalQStr("位！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return ULimits::PWD_ERRLEN;
     }
 
@@ -81,7 +81,7 @@ int FormRegister::checkPwd()
     if(!chk_ok){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("密码必须同时包含数字/字母/下划线，且不能包含其他字符！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return  ULimits::PWD_ERRCH;
     }
 
@@ -102,21 +102,21 @@ void FormRegister::submitForm()
     if(username.length() == 0){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("未填写用户名！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         ui->lnUsername->setFocus();
         return;
     }
     else if(pwd1.length() == 0){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("未填写密码！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         ui->lnPwd1->setFocus();
         return;
     }
     else if(pwd2.length() == 0){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("未填写重复密码！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         ui->lnPwd2->setFocus();
         return;
     }
@@ -132,14 +132,14 @@ void FormRegister::submitForm()
     else if(pwd1 != pwd2){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("两次输入的密码不一致！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return;
     }
 #if 0
     //输入格式正确
     title = CStr2LocalQStr("提示");
     info = CStr2LocalQStr("输入框更新");
-    QMessageBox::information(NULL, title, info);
+    QMessageBox::information(nullptr, title, info);
 #endif
     qDebug() << CStr2LocalQStr("输入框更新！");
     //加密

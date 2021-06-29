@@ -69,13 +69,13 @@ void FormFolder::changeRootDir()
     if(path.length() == 0){
         QString title = CStr2LocalQStr("错误");
         QString info = CStr2LocalQStr("输入不能为空！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return;
     }
     else if(path == m_root_dir){
         QString title = CStr2LocalQStr("提示");
         QString info = path + CStr2LocalQStr("目录未改变！");
-        QMessageBox::information(NULL, title, info);
+        QMessageBox::information(nullptr, title, info);
         return;
     }
 
@@ -85,19 +85,19 @@ void FormFolder::changeRootDir()
     if(!dDir.exists()){
         QString title = CStr2LocalQStr("错误");
         QString info = CStr2LocalQStr("目录不存在！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
     }
     //不是目录
     else if(!dirInfo.isDir()){
         QString title = CStr2LocalQStr("错误");
         QString info = path + CStr2LocalQStr("不是目录！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
     }
     //目录存在
     else {
         QString title = CStr2LocalQStr("提示");
         QString info = path + CStr2LocalQStr("目录更换成功！");
-        QMessageBox::information(NULL, title, info);
+        QMessageBox::information(nullptr, title, info);
         //目录监视
         m_pFilesysWatcher->removePath(m_root_dir);  //删除原目录
         m_root_dir = path;
@@ -129,16 +129,32 @@ void FormFolder::onFileChanged(const QString &path)
     if(!fileInfo.exists()){
         qDebug() << CStr2LocalQStr("删除文件！") << path;
         m_pFilesysWatcher->removePath(path);
+        /**********************************************
+         * 此处不考虑文件是否为空，直接发删除命令。
+         * 实际上，若文件为空，则远程目录没有该文件，无需删除。
+         * 但程序运行至此，本地文件已被删除，无法获取长度。
+         *********************************************/
         //## 同步：删除文件
         emit rmfile(path);
+
         //刷新目录树
         if(m_autoUpd_flag)      //自动刷新
             updateFolderTree();
     }
     else {
         qDebug() << CStr2LocalQStr("修改文件！") << path;
-        //## 同步：上传文件
-        //emit upfile(path);
+        //修改后，变为空则删除，非空则上传
+        int file_len = fileInfo.size();
+        int start = m_root_dir.length() + 1;    //截取相对路径
+        QString relt_path = path.mid(start);
+        if(file_len != 0){
+            //## 同步：上传文件
+            emit upfile(relt_path);
+        }
+        else{
+            //## 同步：删除文件
+            emit rmfile(relt_path);
+        }
     }
 }
 
@@ -150,10 +166,11 @@ void FormFolder::onDirChanged(const QString &path)
         qDebug() << CStr2LocalQStr("删除目录！") << path;
         m_pFilesysWatcher->removePath(path);
         //## 同步：删除目录
-        emit rmdir(path);
+        int start = m_root_dir.length() + 1;    //截取相对路径
+        emit rmdir(path.mid(start) + "/");
     }
     else {
-        //qDebug() << CStr2LocalQStr("修改目录！") << path;
+        qDebug() << CStr2LocalQStr("修改目录！") << path;
     }
     if(m_autoUpd_flag){     //自动刷新
         updateFolderTree();
@@ -340,7 +357,8 @@ void FormFolder::updateFolderChilds(QTreeWidgetItem *pParent, const QString &abs
             qDebug() << CStr2LocalQStr("添加监视目录！") << dir_path;
             m_pFilesysWatcher->addPath(dir_path);        //添加监视
             //## 同步：新建目录
-            emit mkdir(dir_path);
+            int start = m_root_dir.length() + 1;    //截取相对路径
+            emit mkdir(dir_path.mid(start) + "/");
         }
     }
 

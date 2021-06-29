@@ -47,14 +47,14 @@ void FormLogin::submitForm()
     if(username.length() == 0){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("未填写用户名！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         ui->lnUsername->setFocus();
         return;
     }
     else if(password.length() == 0){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("未填写密码！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         ui->lnPwd->setFocus();
         return;
     }
@@ -63,21 +63,21 @@ void FormLogin::submitForm()
             ULimits::PWD_OK != ULimits::checkPwd(password)){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("用户名或密码错误！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return;
     }
     //经数据库查询，用户名或密码错误
     else if(0){
         title = CStr2LocalQStr("错误");
         info = CStr2LocalQStr("用户名或密码错误！");
-        QMessageBox::critical(NULL, title, info);
+        QMessageBox::critical(nullptr, title, info);
         return;
     }
     //输入格式正确
 #if 0
     title = CStr2LocalQStr("提示");
     info = CStr2LocalQStr("输入框更新");
-    QMessageBox::information(NULL, title, info);
+    QMessageBox::information(nullptr, title, info);
 #endif
     qDebug() << CStr2LocalQStr("输入框更新！");
     //加密
