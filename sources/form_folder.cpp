@@ -128,7 +128,8 @@ void FormFolder::onFileChanged(const QString &path)
     QFileInfo fileInfo(path);
     if(!fileInfo.exists()){
         qDebug() << CStr2LocalQStr("删除文件！") << path;
-        m_pFilesysWatcher->removePath(path);
+        //删除的文件自动被移除，removePath总是返回false
+        //bool flag = m_pFilesysWatcher->removePath(path);
         /**********************************************
          * 此处不考虑文件是否为空，直接发删除命令。
          * 实际上，若文件为空，则远程目录没有该文件，无需删除。
@@ -164,7 +165,8 @@ void FormFolder::onDirChanged(const QString &path)
     QDir dDir(path);
     if(!dDir.exists()){
         qDebug() << CStr2LocalQStr("删除目录！") << path;
-        m_pFilesysWatcher->removePath(path);
+        //删除的目录自动被移除，removePath总是返回false
+        //bool flag =  m_pFilesysWatcher->removePath(path);
         //## 同步：删除目录
         int start = m_root_dir.length() + 1;    //截取相对路径
         emit rmdir(path.mid(start) + "/");

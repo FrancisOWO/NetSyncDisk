@@ -1,11 +1,20 @@
 #include "tools.h"
-#include <QDebug>
-#include <QCryptographicHash>
+
 #include <QFile>
+#include <QMessageBox>
+#include <QCryptographicHash>
+#include <QDebug>
 
 QString CStr2LocalQStr(const char *str)
 {
     return QString::fromLocal8Bit(str);
+}
+
+QString QBa2MD5(const QByteArray &barray)
+{
+    QByteArray ba = QCryptographicHash::hash(
+                barray, QCryptographicHash::Md5);
+    return ba.toHex();
 }
 
 QString QStr2MD5(const QString &str)
@@ -19,7 +28,7 @@ QString getFileMD5(const QString &file_path)
 {
     //打开文件
     QFile file_in(file_path);
-    if(!file_in.open(QFile::ReadOnly)){
+    if(!file_in.open(QIODevice::ReadOnly)){
         qDebug() << CStr2LocalQStr("文件不存在！");
         return "";
     }
@@ -45,6 +54,28 @@ QString getFileMD5(const QString &file_path)
     file_in.close();
 
     return hash_md5.result().toHex();
+}
+
+void MyMessageBox::information(const char *title, const char *info)
+{
+    QString qtitle = CStr2LocalQStr(title);
+    QString qinfo = CStr2LocalQStr(info);
+    QMessageBox::information(nullptr, qtitle, qinfo);
+
+}
+
+void MyMessageBox::critical(const char *title, const char *info)
+{
+    QString qtitle = CStr2LocalQStr(title);
+    QString qinfo = CStr2LocalQStr(info);
+    QMessageBox::critical(nullptr, qtitle, qinfo);
+}
+
+void MyMessageBox::warning(const char *title, const char *info)
+{
+    QString qtitle = CStr2LocalQStr(title);
+    QString qinfo = CStr2LocalQStr(info);
+    QMessageBox::warning(nullptr, qtitle, qinfo);
 }
 
 //用户名 长度检查

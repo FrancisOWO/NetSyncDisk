@@ -63,12 +63,21 @@ private:
 
     void InitSocket();
 
-    void parseLoginJson(const QString &str);
-    void parseUpfileJson(const QString &str);
-    void parseUpfilesegJson(const QString &str);
+    void parseJson(const QString &str);
+
+    void parseJsonRegister(const Json::Value &recvJson);
+    void parseJsonLogin(const Json::Value &recvJson);
+    void parseJsonUpfile(const Json::Value &recvJson);
+    void parseJsonUpfileseg(const Json::Value &recvJson);
+    void parseJsonRmfile(const Json::Value &recvJson);
+    void parseJsonMkdir(const Json::Value &recvJson);
+    void parseJsonRmdir(const Json::Value &recvJson);
 
 private slots:
     void setUsername();
+    void clearUsername();
+    void clearUserid();
+    void clearUpfile();
 
     void connectServer();       //连接服务器
     void disconnectServer();    //断开连接

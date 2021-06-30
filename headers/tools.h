@@ -4,9 +4,18 @@
 
 QString CStr2LocalQStr(const char *str);
 
+QString QBa2MD5(const QByteArray &str);
+
 QString QStr2MD5(const QString &str);
 
 QString getFileMD5(const QString &file_path);
+
+class MyMessageBox {
+public:
+    static void information(const char *title, const char *info);
+    static void critical(const char *title, const char *info);
+    static void warning(const char *title, const char *info);
+};
 
 class ULimits {
 public:

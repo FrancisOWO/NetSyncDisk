@@ -58,12 +58,12 @@
     <string>登录</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>50</x>
+     <x>30</x>
      <y>130</y>
-     <width>226</width>
+     <width>256</width>
      <height>77</height>
     </rect>
    </property>
@@ -90,13 +90,13 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>150</width>
+        <width>180</width>
         <height>0</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
-        <width>150</width>
+        <width>180</width>
         <height>16777215</height>
        </size>
       </property>
@@ -155,13 +155,13 @@
      <widget class="QLineEdit" name="lnPwd">
       <property name="minimumSize">
        <size>
-        <width>150</width>
+        <width>180</width>
         <height>0</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
-        <width>150</width>
+        <width>180</width>
         <height>16777215</height>
        </size>
       </property>
@@ -172,6 +172,9 @@
       </property>
       <property name="maxLength">
        <number>16</number>
+      </property>
+      <property name="echoMode">
+       <enum>QLineEdit::Password</enum>
       </property>
      </widget>
     </item>

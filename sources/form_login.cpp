@@ -45,40 +45,27 @@ void FormLogin::submitForm()
 
     //用户名输入为空
     if(username.length() == 0){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("未填写用户名！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "未填写用户名！");
         ui->lnUsername->setFocus();
         return;
     }
     else if(password.length() == 0){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("未填写密码！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "未填写密码！");
         ui->lnPwd->setFocus();
         return;
     }
     //用户名或密码格式出错
     else if(ULimits::UNAME_OK != ULimits::checkUname(username) ||
             ULimits::PWD_OK != ULimits::checkPwd(password)){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("用户名或密码错误！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "用户名或密码错误！");
         return;
     }
     //经数据库查询，用户名或密码错误
     else if(0){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("用户名或密码错误！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "用户名或密码错误！");
         return;
     }
     //输入格式正确
-#if 0
-    title = CStr2LocalQStr("提示");
-    info = CStr2LocalQStr("输入框更新");
-    QMessageBox::information(nullptr, title, info);
-#endif
     qDebug() << CStr2LocalQStr("输入框更新！");
     //加密
     password = QStr2MD5(password);

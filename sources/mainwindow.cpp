@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QAbstractSocket>
 #include <QByteArray>
+#include <QTextCodec>
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
@@ -38,10 +39,9 @@ void MainWindow::InitMembers()
 {
     m_is_connected = 0;
     m_recv_status = 0;
-    m_start_bit = 0;
 
-    m_userid = -1;
-    m_fileid = -1;
+    clearUserid();
+    clearUpfile();
 
     m_pRegister = new FormRegister;
     m_pLogin = new FormLogin;
@@ -92,33 +92,48 @@ void MainWindow::InitConnections()
 
 
     connect(m_server_sock, &QTcpSocket::connected, [=](){
-        QString title = CStr2LocalQStr("提示");
-        QString info = CStr2LocalQStr("连接成功！");
-        QMessageBox::information(nullptr, title, info);
+        MyMessageBox::information("提示", "连接成功！");
         m_is_connected = 1;
     });
     connect(m_server_sock, &QTcpSocket::readyRead, [=](){
-        QString title = CStr2LocalQStr("提示");
-        QString info = CStr2LocalQStr("可以读取数据！");
-        QMessageBox::information(nullptr, title, info);
-
+#if 0
+        MyMessageBox::information("提示", "可以读取数据！");
+#endif
         recvData();     //接收数据
     });
     typedef void (QAbstractSocket::*QAbstractSocketErrorSignal)(QAbstractSocket::SocketError);
     connect(m_server_sock, static_cast<QAbstractSocketErrorSignal>(&QTcpSocket::error), [=](){
-        QString title = CStr2LocalQStr("提示");
-        QString info = CStr2LocalQStr("连接失败！");
         if(1 == m_is_connected)
-            info = CStr2LocalQStr("连接断开！");
-        QMessageBox::information(nullptr, title, info);
+            MyMessageBox::information("提示", "连接断开！");
+        else
+            MyMessageBox::information("提示", "连接失败！");
         m_is_connected = 0;
-        m_userid = -1;
+        clearUserid();
+        clearUsername();
     });
 }
 
 void MainWindow::setUsername()
 {
     ui->lnUsername->setText(m_username);
+}
+
+void MainWindow::clearUsername()
+{
+    m_username.clear();
+    ui->lnUsername->setText(CStr2LocalQStr("未登录"));
+}
+
+void MainWindow::clearUserid()
+{
+    m_userid = -1;
+}
+
+void MainWindow::clearUpfile()
+{
+    m_fileid = -1;
+    m_start_bit = 0;
+    m_file_path.clear();
 }
 
 void MainWindow::InitSocket()
@@ -170,7 +185,8 @@ void MainWindow::sendData()
 
 }
 
-void MainWindow::parseLoginJson(const QString &str)
+//解析从服务端收到的消息
+void MainWindow::parseJson(const QString &str)
 {
     Json::CharReaderBuilder reader;
     Json::Value recvJson;
@@ -182,58 +198,127 @@ void MainWindow::parseLoginJson(const QString &str)
         return;
     }
     qDebug() << "function:" << recvJson["function"].asCString();
-    qDebug() << "userid:" << recvJson["userid"].asInt();
 
-    m_userid = recvJson["userid"].asInt();
+    //根据function进行解析
+    if(recvJson["function"] == "register"){
+        parseJsonRegister(recvJson);
+    }
+    else if(recvJson["function"] == "login"){
+        parseJsonLogin(recvJson);
+    }
+    else if(recvJson["function"] == "upfile"){
+        parseJsonUpfile(recvJson);
+    }
+    else if(recvJson["function"] ==  "upfileseg"){
+        parseJsonUpfileseg(recvJson);
+    }
+    else if(recvJson["function"] ==  "rmfile"){
+        parseJsonRmfile(recvJson);
+    }
+    else if(recvJson["function"] ==  "mkdir"){
+        parseJsonMkdir(recvJson);
+    }
+    else if(recvJson["function"] ==  "rmdir"){
+        parseJsonRmdir(recvJson);
+    }
+}
+
+//注册
+void MainWindow::parseJsonRegister(const Json::Value &recvJson)
+{
+    qDebug() << "function:" << recvJson["function"].asCString();
+
+    int status = recvJson["status"].asInt();
+    if(1 == status){
+        MyMessageBox::information("提示", "注册成功！");
+    }
+    else {
+        MyMessageBox::critical("错误", "注册失败！该用户名已被注册！");
+    }
     m_recv_status = STAT_WAIT;    //清标志位
 }
 
-void MainWindow::parseUpfileJson(const QString &str)
+//登录
+void MainWindow::parseJsonLogin(const Json::Value &recvJson)
 {
-    Json::CharReaderBuilder reader;
-    Json::Value recvJson;
-    JSONCPP_STRING errs;
-    std::stringstream ss(str.toStdString());
-    bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
-    if (!res || !errs.empty()) {
-        qDebug() << "recv error!";
-        return;
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "userid:" << recvJson["userid"].asInt();
+
+    int status = recvJson["status"].asInt();
+    if(1 == status){
+        MyMessageBox::information("提示", "登录成功！");
+        m_userid = recvJson["userid"].asInt();
+        setUsername();
     }
+    else {
+        MyMessageBox::critical("错误", "登录失败！用户名或密码不正确！");
+        clearUserid();
+        clearUsername();
+    }
+    m_recv_status = STAT_WAIT;    //清标志位
+}
+
+//上传文件
+void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
+{
     qDebug() << "function:" << recvJson["function"].asCString();
     qDebug() << "fileid:" << recvJson["fileid"].asInt();
     qDebug() << "startbit:" << recvJson["startbit"].asInt();
 
+    int status = recvJson["status"].asInt();
+    if(0 == status){    //已同步，无需上传
+        MyMessageBox::information("提示", "已同步，无需上传！");
+        clearUpfile();
+        return;
+    }
     m_fileid = recvJson["fileid"].asInt();
     m_start_bit = recvJson["startbit"].asInt();
     m_recv_status = STAT_WAIT;    //清标志位
+    //开始上传
+    upfileBySeg();
 }
 
-void MainWindow::parseUpfilesegJson(const QString &str)
+//上传文件片段
+void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
 {
-    Json::CharReaderBuilder reader;
-    Json::Value recvJson;
-    JSONCPP_STRING errs;
-    std::stringstream ss(str.toStdString());
-    bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
-    if (!res || !errs.empty()) {
-        qDebug() << "recv error!";
-        return;
-    }
     qDebug() << "function:" << recvJson["function"].asCString();
     qDebug() << "finish:" << recvJson["finish"].asInt();
-
-    //m_start_bit = recvJson["startbit"].asInt();
+    int segtrue = recvJson["segtrue"].asInt();
     int finish = recvJson["finish"].asInt();
-    if(finish) {
-        QString title = CStr2LocalQStr("提示");
-        QString info = CStr2LocalQStr("传输结束！");
-        QMessageBox::information(nullptr, title, info);
-        m_file_path.clear();
+
+    if(!segtrue){       //本段上传失败
+        MyMessageBox::critical("提示", "传输出错！");
+        clearUpfile();
+        return;
+    }
+    else if(finish) {        //上传完成
+        MyMessageBox::information("提示", "上传完成！");
+        clearUpfile();
+        return;
     }
     //## 发文件片段，不清标志位
     //m_recv_status = STAT_WAIT;
+    //本段上传成功，传下一段
+    upfileBySeg();
 }
 
+//删除文件
+void MainWindow::parseJsonRmfile(const Json::Value &recvJson)
+{
+
+}
+
+//建立目录
+void MainWindow::parseJsonMkdir(const Json::Value &recvJson)
+{
+
+}
+
+//删除目录
+void MainWindow::parseJsonRmdir(const Json::Value &recvJson)
+{
+
+}
 
 //接收数据
 void MainWindow::recvData()
@@ -252,16 +337,8 @@ void MainWindow::recvData()
 
     ui->txtRecv->setText(str);
 
-    //登录时，记录userid
-    if(STAT_LOGIN == m_recv_status){
-        parseLoginJson(str);
-    }
-    else if(STAT_UPFILE == m_recv_status){
-        parseUpfileJson(str);
-    }
-    else if(STAT_UPSEG == m_recv_status){
-        parseUpfilesegJson(str);
-    }
+    parseJson(str);
+
 }
 
 //打开注册页面s
@@ -302,12 +379,11 @@ void MainWindow::sendDataRegister()
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
-    //pRegister->clearData();
-    m_pRegister->close();
-    //m_username = usname;
-    //setUsername();
+    //pRegister->clearData();   //清除信息
+    //m_pRegister->close();     //关闭窗口
 
     m_recv_status = STAT_REGISTER;
+    sendData();     //发送数据
 }
 
 //登录
@@ -315,7 +391,7 @@ void MainWindow::sendDataLogin()
 {
     qDebug() <<"login...";
     QString usname = m_pLogin->getUsername();
-    QString pwd = m_pRegister->getPassword();
+    QString pwd = m_pLogin->getPassword();
     qDebug() <<"username: "<< usname;
     qDebug() <<"password: "<< pwd;
 
@@ -327,12 +403,12 @@ void MainWindow::sendDataLogin()
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
-    //pLogin->clearData();
-    m_pLogin->close();
+    //pLogin->clearData();  //清除信息
+    //m_pLogin->close();    //关闭窗口
     m_username = usname;
-    setUsername();
 
     m_recv_status = STAT_LOGIN;
+    sendData();     //发送数据
 }
 
 //退出登录
@@ -352,18 +428,17 @@ void MainWindow::sendDataLogout()
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
-    m_userid = -1;    //置非法id
+    clearUserid();    //置非法id
 
     m_recv_status = STAT_WAIT;
+    sendData();     //发送数据
 }
 
 //分段上传文件
 void MainWindow::upfileBySeg()
 {
     if(m_file_path.length() == 0){
-        QString title = CStr2LocalQStr("错误");
-        QString info = CStr2LocalQStr("未选择文件！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "未选择文件！");
         m_recv_status = STAT_WAIT;
         return;
     }
@@ -374,6 +449,9 @@ void MainWindow::upfileBySeg()
     const int buf_len = 4096;
     int one_send_len = buf_len;
     qint64 remain_len = total_len - m_start_bit;
+    qDebug() << CStr2LocalQStr("已发送") << QString::number(m_start_bit)
+             << CStr2LocalQStr("字节，剩余") << QString::number(remain_len)
+             << CStr2LocalQStr("字节");
     if(remain_len > 0){
         if(one_send_len > remain_len)
             one_send_len = int(remain_len);
@@ -381,23 +459,15 @@ void MainWindow::upfileBySeg()
 
         //m_start_bit += one_send_len;
         //remain_len -= one_send_len;
-
-        qDebug() << CStr2LocalQStr("已发送") << QString::number(m_start_bit + one_send_len)
-                 << CStr2LocalQStr("字节，剩余") << QString::number(remain_len - one_send_len)
+        /*
+        qDebug() << CStr2LocalQStr("已发送") << QString::number(m_start_bit)
+                 << CStr2LocalQStr("字节，剩余") << QString::number(remain_len)
                  << CStr2LocalQStr("字节");
-        m_recv_status = STAT_UPSEG;
+        */
+    m_recv_status = STAT_UPSEG;
     }
     else {
-        qDebug() << CStr2LocalQStr("上传完毕！");
-
-        QString title = CStr2LocalQStr("提示");
-        QString info = CStr2LocalQStr("文件上传完毕！");
-        QMessageBox::information(nullptr, title, info);
-
-        ui->txtSend->clear();
-        m_file_path = "";
-        m_start_bit = 0;
-
+        clearUpfile();
         m_recv_status = STAT_WAIT;
     }
 }
@@ -411,9 +481,7 @@ void MainWindow::sendDataUpfile(const QString &file_path)
     QFileInfo file_info(full_path);
     quint64 file_size = file_info.size();
     if(file_size <= 0){
-        QString title = CStr2LocalQStr("错误");
-        QString info = CStr2LocalQStr("不能上传空文件！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "不能上传空文件！");
         ui->txtSend->clear();
         return;
     }
@@ -438,13 +506,14 @@ void MainWindow::sendDataUpfile(const QString &file_path)
     ui->txtSend->setText(sendbuf);
 
     m_recv_status = STAT_UPFILE;
+    sendData();     //发送数据
 }
 
 //发送文件片段
 void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, int len)
 {
     QFile file_in(file_path);
-    if(!file_in.open(QFile::ReadOnly)){
+    if(!file_in.open(QIODevice::ReadOnly)){
         qDebug() << CStr2LocalQStr("文件打开失败！");
         return;
     }
@@ -457,13 +526,26 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
     QByteArray seg_ba = file_in.read(len);     //读取文件
     file_in.close();        //关闭文件
 
-    QString seg_content(seg_ba);
+    m_start_bit += seg_ba.length();
+
+    //QByteArray是字节流，不能直接转QString，否则'\0'之后都会被过滤
+    QTextCodec *codec = QTextCodec::codecForName("KOI8-R");
+
+    QString seg_content = codec->toUnicode(seg_ba);
     QString seg_md5 = QStr2MD5(seg_content);
+    //QString seg_md5 = QBa2MD5(seg_ba);
+
+    qDebug() <<"***************************";
+    qDebug() << "len="<<len <<", read_len:" << seg_ba.length();
+    //QString msg = "len=" + QString::number(len) + ",read_len=" + QString::number(seg_content.length());
+    //QMessageBox::information(nullptr, "info", msg);
+
+    qDebug() <<"***************************";
 
     qDebug() <<"upfileseg...";
     qDebug() <<"fileid: "<< m_fileid;
     qDebug() <<"md5: "<< seg_md5;
-    qDebug() <<"content: "<< seg_content;
+    //qDebug() <<"content: "<< seg_content;
 
     Json::Value sendJson;
     sendJson["function"] = "upfileseg";
@@ -473,6 +555,8 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
 
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
+
+    sendData();     //发送数据
 }
 
 //删除文件
@@ -486,6 +570,7 @@ void MainWindow::sendDataRmfile(const QString &file_path)
     ui->txtSend->setText(sendbuf);
 
     m_recv_status = STAT_RMFILE;
+    sendData();     //发送数据
 }
 
 //创建目录
@@ -499,6 +584,7 @@ void MainWindow::sendDataMkdir(const QString &dir_path)
     ui->txtSend->setText(sendbuf);
 
     m_recv_status = STAT_MKDIR;
+    sendData();     //发送数据
 }
 
 //删除目录
@@ -512,6 +598,7 @@ void MainWindow::sendDataRmdir(const QString &dir_path)
     ui->txtSend->setText(sendbuf);
 
     m_recv_status = STAT_RMDIR;
+    sendData();     //发送数据
 }
 
 //窗口关闭

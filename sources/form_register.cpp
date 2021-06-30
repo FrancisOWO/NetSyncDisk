@@ -54,9 +54,7 @@ int FormRegister::checkUname()
     //字符检查
     bool chk_ok = ULimits::checkUnameCh(username);
     if(!chk_ok){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("用户名不能含有数字、字母、下划线以外的字符！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "用户名不能含有数字、字母、下划线以外的字符！");
         return ULimits::UNAME_ERRCH;
     }
     return ULimits::UNAME_OK;
@@ -79,9 +77,7 @@ int FormRegister::checkPwd()
     //字符检查
     bool chk_ok = ULimits::checkPwdCh(password);
     if(!chk_ok){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("密码必须同时包含数字/字母/下划线，且不能包含其他字符！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "密码必须同时包含数字/字母/下划线，且不能包含其他字符！");
         return  ULimits::PWD_ERRCH;
     }
 
@@ -100,23 +96,17 @@ void FormRegister::submitForm()
 
     //用户名输入为空
     if(username.length() == 0){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("未填写用户名！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "未填写用户名！");
         ui->lnUsername->setFocus();
         return;
     }
     else if(pwd1.length() == 0){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("未填写密码！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "未填写密码！");
         ui->lnPwd1->setFocus();
         return;
     }
     else if(pwd2.length() == 0){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("未填写重复密码！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "未填写重复密码！");
         ui->lnPwd2->setFocus();
         return;
     }
@@ -130,17 +120,9 @@ void FormRegister::submitForm()
     }
     //两次密码不一致
     else if(pwd1 != pwd2){
-        title = CStr2LocalQStr("错误");
-        info = CStr2LocalQStr("两次输入的密码不一致！");
-        QMessageBox::critical(nullptr, title, info);
+        MyMessageBox::critical("错误", "两次输入的密码不一致！");
         return;
     }
-#if 0
-    //输入格式正确
-    title = CStr2LocalQStr("提示");
-    info = CStr2LocalQStr("输入框更新");
-    QMessageBox::information(nullptr, title, info);
-#endif
     qDebug() << CStr2LocalQStr("输入框更新！");
     //加密
     password = QStr2MD5(password);
