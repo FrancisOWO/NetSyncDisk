@@ -1,10 +1,13 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 #include <QString>
+#include <QByteArray>
 
 QString Num2ByteNum(const int &num);
 
 QString getByteNumRatio(const int &num1, const int &num2);
+
+QByteArray QStr2LocalBa(const QString &str);
 
 QString CStr2LocalQStr(const char *str);
 

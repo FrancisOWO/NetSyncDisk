@@ -212,23 +212,22 @@ void MainWindow::disconnectServer()
 }
 
 //发送文件数据
-void MainWindow::sendFileData(const QString &json_str, const QByteArray &content_ba)
+void MainWindow::sendFileData(const QByteArray &json_ba, const QByteArray &content_ba)
 {
     //QString content = ui->txtSend->toPlainText();
-    unsigned short len = (unsigned short)(json_str.length() + content_ba.length() + 1);
+    unsigned short len = (unsigned short)(json_ba.length() + content_ba.length() + 1);
     //qDebug() << "pack len:" << len;
-    QString str;
+    QByteArray str_ba;
     //长度
-    str += (uchar)(0x00ff & len);
-    str += (uchar)((0xff00 & len) >> 8);
+    str_ba += (uchar)(0x00ff & len);
+    str_ba += (uchar)((0xff00 & len) >> 8);
     //内容
-    str += json_str;
-
-    str += "+";
+    str_ba += json_ba;
+    str_ba += "+";     //防止文件中有注释被json解析，用一个字符隔开
     //qDebug() << str;
 
-    QByteArray ba = str.toLatin1();
-    ba += content_ba;
+    //QByteArray ba = str.toLatin1();
+    str_ba += content_ba;
 #ifdef DEBUG_COUT
     qDebug() <<"ba len: "<< ba.length();
     QString msg_str = "ba_len :" + QString::number(ba.length())
@@ -236,7 +235,7 @@ void MainWindow::sendFileData(const QString &json_str, const QByteArray &content
             + ", content_len:" + QString::number(content_ba.length());
     //QMessageBox::critical(nullptr, "!!!", msg_str);
 #endif
-    m_server_sock->write(ba);
+    m_server_sock->write(str_ba);
     //m_server_sock->write(content_ba);
 #ifdef DEBUG_COUT
     for(int i = 0; i < content_ba.length(); i++){
@@ -262,6 +261,22 @@ void MainWindow::sendFileData(const QString &json_str, const QByteArray &content
 }
 
 //发送数据
+void MainWindow::sendData(const QByteArray &content_ba)
+{
+    //QString content = ui->txtSend->toPlainText();
+    unsigned short len = (unsigned short)(content_ba.length());
+    QByteArray str_ba;
+    //长度
+    str_ba += (uchar)(0x00ff & len);
+    str_ba += (uchar)((0xff00 & len) >> 8);
+    //内容
+    str_ba += content_ba;
+    //qDebug() << str;
+    m_server_sock->write(str_ba);
+}
+
+//发送数据(QString)
+#if 0
 void MainWindow::sendData(const QString &content)
 {
     //QString content = ui->txtSend->toPlainText();
@@ -275,6 +290,7 @@ void MainWindow::sendData(const QString &content)
     //qDebug() << str;
     m_server_sock->write(str.toLatin1());
 }
+#endif
 
 //解析从服务端收到的消息
 void MainWindow::parseJson(const QString &str)
@@ -495,8 +511,9 @@ void MainWindow::sendDataRegister()
     //pRegister->clearData();   //清除信息
     //m_pRegister->close();     //关闭窗口
 
+    QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_REGISTER;
-    sendData(sendbuf);     //发送数据
+    sendData(sendba);     //发送数据
 }
 
 //登录
@@ -520,8 +537,9 @@ void MainWindow::sendDataLogin()
     //m_pLogin->close();    //关闭窗口
     m_username = usname;
 
+    QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_LOGIN;
-    sendData(sendbuf);     //发送数据
+    sendData(sendba);     //发送数据
 }
 
 //退出登录
@@ -543,8 +561,9 @@ void MainWindow::sendDataLogout()
 
     clearUserid();    //置非法id
 
+    QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_WAIT;
-    sendData(sendbuf);     //发送数据
+    sendData(sendba);     //发送数据
 }
 
 //分段上传文件
@@ -634,8 +653,9 @@ void MainWindow::sendDataUpfile(const QString &file_path)
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
+    QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_UPFILE;
-    sendData(sendbuf);     //发送数据
+    sendData(sendba);     //发送数据
 }
 
 //发送文件片段
@@ -706,9 +726,8 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
         sendJson["content"][i] = int(seg_ba[i]);
     }
 #endif
-    QByteArray sendbuf = sendJson.toStyledString().data();
+    QByteArray sendba = sendJson.toStyledString().data();
     //ui->txtSend->setText(sendbuf);
-
 
 #if 0
     Json::CharReaderBuilder reader;
@@ -728,7 +747,7 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
     QMessageBox::warning(nullptr, "title", msg);
 #endif
 
-    sendFileData(sendbuf, seg_ba);     //发送数据
+    sendFileData(sendba, seg_ba);     //发送数据
 }
 
 //删除文件
@@ -746,8 +765,10 @@ void MainWindow::sendDataRmfile(const QString &file_path)
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
+    QByteArray sendba = QStr2LocalBa(sendbuf);
+
     m_recv_status = STAT_RMFILE;
-    sendData(sendbuf);     //发送数据
+    sendData(sendba);     //发送数据
 }
 
 //创建目录
@@ -760,15 +781,20 @@ void MainWindow::sendDataMkdir(const QString &dir_path)
     //    return;
     Json::Value sendJson;
     sendJson["function"] = "mkdir";
-    sendJson["path"] = dir_path.toLocal8Bit().toStdString();
+    sendJson["path"] = dir_path.toStdString();
 
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
+    QByteArray sendba = QStr2LocalBa(sendbuf);
+
+    //### 测试中文编码转回
+#if 0
     Json::CharReaderBuilder reader;
     Json::Value recvJson;
     JSONCPP_STRING errs;
-    std::stringstream ss(sendbuf.toStdString());
+    std::stringstream ss(sendba.toStdString());
+    //std::stringstream ss(sendbuf.toLocal8Bit().toStdString());
     bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
     if (!res || !errs.empty()) {
         qDebug() << "recv error!";
@@ -782,9 +808,9 @@ void MainWindow::sendDataMkdir(const QString &dir_path)
     int str_len = recvJson["path"].asString().length();
     file_in.write(recvJson["path"].asString().c_str(), str_len);
     file_in.close();
-
+#endif
     m_recv_status = STAT_MKDIR;
-    sendData(sendbuf);     //发送数据
+    sendData(sendba);     //发送数据
 }
 
 //删除目录
@@ -803,8 +829,9 @@ void MainWindow::sendDataRmdir(const QString &dir_path)
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
+    QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_RMDIR;
-    sendData(sendbuf);     //发送数据
+    sendData(sendba);     //发送数据
 }
 
 //窗口关闭

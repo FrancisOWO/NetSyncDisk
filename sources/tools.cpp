@@ -5,7 +5,6 @@
 #include <QCryptographicHash>
 #include <QDebug>
 
-
 QString Num2ByteNum(const int &num)
 {
     float fnum = num;
@@ -27,6 +26,11 @@ QString Num2ByteNum(const int &num)
 QString getByteNumRatio(const int &num1, const int &num2)
 {
     return Num2ByteNum(num1) + "/" + Num2ByteNum(num2);
+}
+
+QByteArray QStr2LocalBa(const QString &str)
+{
+    return str.toLocal8Bit();
 }
 
 QString CStr2LocalQStr(const char *str)
