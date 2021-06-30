@@ -36,6 +36,10 @@ public:
     static const int STAT_MKDIR     = 6;
     static const int STAT_RMDIR     = 7;
 
+    static const int CONN_NO    = 0;
+    static const int CONN_ING   = 1;
+    static const int CONN_OK    = 2;
+
 protected:
     void closeEvent(QCloseEvent *event) override;
 
@@ -60,8 +64,10 @@ private:
 private:
     void InitMembers();
     void InitConnections();
-
     void InitSocket();
+
+    bool isLoginUser();
+    void setConStatus(int status);
 
     void parseJson(const QString &str);
 

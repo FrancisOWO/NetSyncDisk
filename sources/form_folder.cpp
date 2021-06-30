@@ -163,8 +163,16 @@ void FormFolder::onDirChanged(const QString &path)
 {
     //qDebug() << CStr2LocalQStr("目录变化！") << path;
     QDir dDir(path);
+    static QString rmpath = "";
     if(!dDir.exists()){
-        qDebug() << CStr2LocalQStr("删除目录！") << path;
+        if(path == rmpath){
+            //qDebug() << CStr2LocalQStr("目录已删除！") << path;
+            return;
+        }
+        else {
+            qDebug() << CStr2LocalQStr("删除目录！") << path;
+            rmpath = path;
+        }
         //删除的目录自动被移除，removePath总是返回false
         //bool flag =  m_pFilesysWatcher->removePath(path);
         //## 同步：删除目录
@@ -172,7 +180,8 @@ void FormFolder::onDirChanged(const QString &path)
         emit rmdir(path.mid(start) + "/");
     }
     else {
-        qDebug() << CStr2LocalQStr("修改目录！") << path;
+        rmpath = "";
+        //qDebug() << CStr2LocalQStr("修改目录！") << path;
     }
     if(m_autoUpd_flag){     //自动刷新
         updateFolderTree();

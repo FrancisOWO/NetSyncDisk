@@ -43,7 +43,9 @@ void MainWindow::InitMembers()
     m_recv_status = 0;
 
     clearUserid();
+    clearUsername();
     clearUpfile();
+    setConStatus(CONN_NO);
 
     m_pRegister = new FormRegister;
     m_pLogin = new FormLogin;
@@ -108,7 +110,7 @@ void MainWindow::InitConnections()
         if(1 == m_is_connected)
             MyMessageBox::information("提示", "连接断开！");
         else
-            MyMessageBox::information("提示", "连接失败！");
+            MyMessageBox::critical("错误", "连接失败！");
         m_is_connected = 0;
         clearUserid();
         clearUsername();
@@ -141,8 +143,34 @@ void MainWindow::clearUpfile()
 void MainWindow::InitSocket()
 {
     m_server_sock = new QTcpSocket(this);
-
     m_server_sock->setReadBufferSize(65536);
+}
+
+//判断用户是否登录
+bool MainWindow::isLoginUser()
+{
+    bool is_login = (m_userid >= 0);
+    if(!is_login){
+        qDebug() << "ERROR: Not Login!";
+        //MyMessageBox::critical("错误", "用户未登录！");
+    }
+    is_login = 1;
+    return is_login;
+}
+
+void MainWindow::setConStatus(int status)
+{
+    QString str;
+    if(status == CONN_NO){
+        str = CStr2LocalQStr("未连接");
+    }
+    else if(status == CONN_ING){
+        str = CStr2LocalQStr("连接中......");
+    }
+    else if(status == CONN_OK){
+        str = CStr2LocalQStr("已连接");
+    }
+    ui->lnConStatus->setText(str);
 }
 
 void MainWindow::connectServer()
@@ -160,13 +188,24 @@ void MainWindow::connectServer()
     qDebug() <<"port: "<< port;
 
     m_server_sock->connectToHost(ipaddr, port);
+    setConStatus(CONN_ING);
+    if(m_server_sock->waitForConnected()){
+        setConStatus(CONN_OK);
+        //MyMessageBox::information("提示", "连接成功！");
+    }
+    else {
+        setConStatus(CONN_NO);
+        //MyMessageBox::critical("错误", "连接失败！");
+    }
 
 }
 
 void MainWindow::disconnectServer()
 {
     m_server_sock->disconnect();
-    //server_sock->close();
+    //m_server_sock->close();
+    MyMessageBox::information("提示", "断开连接！");
+    ui->lnConStatus->setText(CStr2LocalQStr("未连接"));
 }
 
 //发送数据
@@ -366,6 +405,9 @@ void MainWindow::openLoginPage()
 //打开目录页面
 void MainWindow::openFolderPage()
 {
+    if(!isLoginUser())
+        return;
+
     QString root_dir = "E:/test";
     m_pFolder->setRootDir(root_dir);
     m_pFolder->InitFolderTree();
@@ -424,9 +466,9 @@ void MainWindow::sendDataLogin()
 //退出登录
 void MainWindow::sendDataLogout()
 {
-    //未登录
-    //if(userid < 0)
-    //    return;
+    //用户未登录
+    if(!isLoginUser())
+        return;
     qDebug() <<"logout...";
     qDebug() <<"username: "<< m_username;
     qDebug() <<"userid: "<< m_userid;
@@ -493,6 +535,9 @@ void MainWindow::upfileBySeg()
 //上传文件
 void MainWindow::sendDataUpfile(const QString &file_path)
 {
+    //用户未登录
+    if(!isLoginUser())
+        return;
     QString full_path = m_pFolder->getRootDir() + "/" + file_path;
     m_file_path = full_path;
 
@@ -530,6 +575,9 @@ void MainWindow::sendDataUpfile(const QString &file_path)
 //发送文件片段
 void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, int len)
 {
+    //用户未登录
+    if(!isLoginUser())
+        return;
     QFile file_in(file_path);
     if(!file_in.open(QIODevice::ReadOnly)){
         qDebug() << CStr2LocalQStr("文件打开失败！");
@@ -589,6 +637,11 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
 //删除文件
 void MainWindow::sendDataRmfile(const QString &file_path)
 {
+    qDebug() << "rmfile "<< file_path;
+
+    //用户未登录
+    if(!isLoginUser())
+        return;
     Json::Value sendJson;
     sendJson["function"] = "rmfile";
     sendJson["path"] = file_path.toStdString();
@@ -603,6 +656,11 @@ void MainWindow::sendDataRmfile(const QString &file_path)
 //创建目录
 void MainWindow::sendDataMkdir(const QString &dir_path)
 {
+    qDebug() << "mkdir "<< dir_path;
+
+    //用户未登录
+    if(!isLoginUser())
+        return;
     Json::Value sendJson;
     sendJson["function"] = "mkdir";
     sendJson["path"] = dir_path.toStdString();
@@ -617,6 +675,11 @@ void MainWindow::sendDataMkdir(const QString &dir_path)
 //删除目录
 void MainWindow::sendDataRmdir(const QString &dir_path)
 {
+    qDebug() << "rmdir "<< dir_path;
+
+    //用户未登录
+    if(!isLoginUser())
+        return;
     Json::Value sendJson;
     //sendJson["function"] = "rmdir";
     sendJson["function"] = "rmfile";    //删文件和删目录命令合并
@@ -637,7 +700,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         sendDataLogout();
     }
     else {
-        sendDataLogout();
+        //sendDataLogout();
         qDebug() << CStr2LocalQStr("用户已退出");
     }
     event->accept();
