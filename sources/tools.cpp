@@ -5,6 +5,30 @@
 #include <QCryptographicHash>
 #include <QDebug>
 
+
+QString Num2ByteNum(const int &num)
+{
+    float fnum = num;
+    if(fnum < 1000){
+        return QString::number(num) + "B";
+    }
+    fnum = fnum/1000;
+    if(fnum < 1000){
+        return QString::number(fnum,'f',2) + "KB";
+    }
+    fnum = fnum/1000;
+    if(fnum < 1000){
+        return QString::number(fnum,'f',2) + "MB";
+    }
+    fnum = fnum/1000;
+    return QString::number(fnum,'f',2) + "GB";
+}
+
+QString getByteNumRatio(const int &num1, const int &num2)
+{
+    return Num2ByteNum(num1) + "/" + Num2ByteNum(num2);
+}
+
 QString CStr2LocalQStr(const char *str)
 {
     return QString::fromLocal8Bit(str);

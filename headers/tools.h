@@ -2,6 +2,10 @@
 #define TOOLS_H
 #include <QString>
 
+QString Num2ByteNum(const int &num);
+
+QString getByteNumRatio(const int &num1, const int &num2);
+
 QString CStr2LocalQStr(const char *str);
 
 QString QBa2MD5(const QByteArray &str);

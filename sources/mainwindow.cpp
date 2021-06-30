@@ -56,6 +56,8 @@ void MainWindow::InitMembers()
     //ui->spinIP2->setValue(168);
     //ui->spinIP3->setValue(43);
     //ui->spinIP4->setValue(230);
+    ui->progStatus->setValue(0);
+
     ui->spinIP1->setValue(10);
     ui->spinIP2->setValue(60);
     ui->spinIP3->setValue(102);
@@ -364,6 +366,10 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
     m_fileid = recvJson["fileid"].asInt();
     m_start_bit = recvJson["startbit"].asInt();
     m_recv_status = STAT_WAIT;    //清标志位
+
+    int base_len = m_pFolder->getRootDir().length() + 1;
+    QString upfile_str = m_file_path.mid(base_len) + CStr2LocalQStr(" *文件上传中......");
+    ui->lnStatus->setText(upfile_str);
     //开始上传
     upfileBySeg();
 }
@@ -384,6 +390,14 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
         return;
     }
     else if(finish) {        //上传完成
+        QFileInfo file_info(m_file_path);
+        int total_len = file_info.size();
+        int base_len = m_pFolder->getRootDir().length() + 1;
+        QString status_str = m_file_path.mid(base_len)
+                + CStr2LocalQStr(" *文件上传完成！");
+        ui->lnStatus->setText(status_str);
+        ui->progStatus->setValue(100);
+        QString prog_str = getByteNumRatio(total_len, total_len);
         MyMessageBox::information("提示", "上传完成！");
         clearUpfile();
         return;
@@ -551,14 +565,6 @@ void MainWindow::upfileBySeg()
     qint64 remain_len = total_len - m_start_bit;
 
     static QTime qtime_0 = QTime::currentTime();
-    QTime qtime_1 = QTime::currentTime();
-    if(qtime_1.second() != qtime_0.second()){
-        qtime_0 = qtime_1;
-        qDebug() << CStr2LocalQStr("") << QString::number(m_start_bit)
-                 << CStr2LocalQStr("字节，剩余") << QString::number(remain_len)
-                 << CStr2LocalQStr("字节");
-    }
-
     if(remain_len > 0){
         if(one_send_len > remain_len)
             one_send_len = int(remain_len);
@@ -571,7 +577,20 @@ void MainWindow::upfileBySeg()
                  << CStr2LocalQStr("字节，剩余") << QString::number(remain_len)
                  << CStr2LocalQStr("字节");
         */
-    m_recv_status = STAT_UPSEG;
+        QTime qtime_1 = QTime::currentTime();
+        if(qtime_1.second() != qtime_0.second()){
+            qtime_0 = qtime_1;
+            qDebug() << CStr2LocalQStr("") << QString::number(m_start_bit)
+                     << CStr2LocalQStr("字节，剩余") << QString::number(remain_len)
+                     << CStr2LocalQStr("字节");
+
+            //## 进度条
+            QString bcnt_str = getByteNumRatio(m_start_bit, total_len);
+            ui->lnBytes->setText(bcnt_str);
+            int prog_val = 100*m_start_bit/total_len;
+            ui->progStatus->setValue(prog_val);
+        }
+        m_recv_status = STAT_UPSEG;
     }
     else {
         clearUpfile();
@@ -734,17 +753,35 @@ void MainWindow::sendDataRmfile(const QString &file_path)
 //创建目录
 void MainWindow::sendDataMkdir(const QString &dir_path)
 {
-    qDebug() << "mkdir "<< dir_path;
+    qDebug() << "mkdir "<< dir_path.toLocal8Bit();
 
     //用户未登录
-    if(!isLoginUser())
-        return;
+    //if(!isLoginUser())
+    //    return;
     Json::Value sendJson;
     sendJson["function"] = "mkdir";
-    sendJson["path"] = dir_path.toStdString();
+    sendJson["path"] = dir_path.toLocal8Bit().toStdString();
 
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
+
+    Json::CharReaderBuilder reader;
+    Json::Value recvJson;
+    JSONCPP_STRING errs;
+    std::stringstream ss(sendbuf.toStdString());
+    bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
+    if (!res || !errs.empty()) {
+        qDebug() << "recv error!";
+        return;
+    }
+
+    QFile file_in("output-gbk.txt");
+    file_in.open(QFile::WriteOnly);
+    //int str_len = dir_path.toLocal8Bit().toStdString().length();
+    //file_in.write(dir_path.toLocal8Bit().toStdString().c_str(), str_len);
+    int str_len = recvJson["path"].asString().length();
+    file_in.write(recvJson["path"].asString().c_str(), str_len);
+    file_in.close();
 
     m_recv_status = STAT_MKDIR;
     sendData(sendbuf);     //发送数据
