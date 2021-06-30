@@ -88,6 +88,7 @@ private slots:
     void connectServer();       //连接服务器
     void disconnectServer();    //断开连接
 
+    void sendFileData(const QString &json_str, const QByteArray &content_ba);
     void sendData(const QString &content);    //发送数据
     void recvData();    //接收数据
 

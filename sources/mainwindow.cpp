@@ -14,6 +14,7 @@
 #include <QFileInfo>
 #include <sstream>
 #include <iostream>
+#include <string>
 
 #include "tools.h"
 
@@ -208,6 +209,56 @@ void MainWindow::disconnectServer()
     ui->lnConStatus->setText(CStr2LocalQStr("未连接"));
 }
 
+//发送文件数据
+void MainWindow::sendFileData(const QString &json_str, const QByteArray &content_ba)
+{
+    //QString content = ui->txtSend->toPlainText();
+    unsigned short len = (unsigned short)(json_str.length() + content_ba.length() + 1);
+    //qDebug() << "pack len:" << len;
+    QString str;
+    //长度
+    str += (uchar)(0x00ff & len);
+    str += (uchar)((0xff00 & len) >> 8);
+    //内容
+    str += json_str;
+
+    str += "+";
+    //qDebug() << str;
+
+    QByteArray ba = str.toLatin1();
+    ba += content_ba;
+#ifdef DEBUG_COUT
+    qDebug() <<"ba len: "<< ba.length();
+    QString msg_str = "ba_len :" + QString::number(ba.length())
+            + ", json_len:" + QString::number(json_str.length())
+            + ", content_len:" + QString::number(content_ba.length());
+    //QMessageBox::critical(nullptr, "!!!", msg_str);
+#endif
+    m_server_sock->write(ba);
+    //m_server_sock->write(content_ba);
+#ifdef DEBUG_COUT
+    for(int i = 0; i < content_ba.length(); i++){
+        std::cout << int((unsigned char)content_ba[i]) <<" ";
+    }
+    std::cout << endl;
+
+    qDebug() <<"json len :" << json_str.length() <<"latin len:" << content_ba.length();
+#endif
+#if 0
+    Json::CharReaderBuilder reader;
+    Json::Value recvJson;
+    JSONCPP_STRING errs;
+    std::stringstream ss(content.toStdString());
+    bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
+    int std_len = recvJson["content"].asString().length();
+    QString msg = "len :" + QString::number(std_len);
+    for(int i = 0; i < std_len; i++){
+        std::cout << int(recvJson["content"].asString()[i]) <<" ";
+    }
+    QMessageBox::critical(nullptr, "title", msg);
+#endif
+}
+
 //发送数据
 void MainWindow::sendData(const QString &content)
 {
@@ -217,15 +268,10 @@ void MainWindow::sendData(const QString &content)
     //长度
     str += (uchar)(0x00ff & len);
     str += (uchar)((0xff00 & len) >> 8);
-#ifdef DEBUG_UPSEG
-    qDebug() <<"slen :" << str.length();
-#endif
     //内容
     str += content;
     //qDebug() << str;
-    //qDebug() <<"len :" << str.length();
     m_server_sock->write(str.toLatin1());
-
 }
 
 //解析从服务端收到的消息
@@ -351,7 +397,8 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
 //删除文件
 void MainWindow::parseJsonRmfile(const Json::Value &recvJson)
 {
-
+    //int segtrue = recvJson["segtrue"].asInt();
+    //int finish = recvJson["finish"].asInt();
 }
 
 //建立目录
@@ -390,7 +437,7 @@ void MainWindow::recvData()
 
 }
 
-//打开注册页面s
+//打开注册页面
 void MainWindow::openRegisterPage()
 {
     m_pRegister->show();
@@ -595,43 +642,74 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
     m_start_bit += seg_ba.length();
 
     //QByteArray是字节流，不能直接转QString，否则'\0'之后都会被过滤
-    QTextCodec *codec = QTextCodec::codecForName("KOI8-R");
+    //QTextCodec *codec = QTextCodec::codecForName("KOI8-R");
 
-    QString seg_content = codec->toUnicode(seg_ba);
+    //QString seg_content = codec->toUnicode(seg_ba);
     //QString seg_md5 = QStr2MD5(seg_content);
-    QString seg_md5 = QBa2MD5(seg_ba);
 
-#ifdef DEBUG_UPSEG
+    std::string seg_content_std;
+    seg_content_std.resize(len);
+    for(int i = 0; i < len; i++){
+        seg_content_std[i] = seg_ba[i];
+    }
+    QString seg_md5 = QBa2MD5(seg_ba);
+#if 0
     qDebug() <<"***************************";
     qDebug() << "len="<<len <<", read_len:" << seg_ba.length();
-#endif
-    int str_len = seg_content.toStdU32String().length();
 
-    QString msg = "len=" + QString::number(len) + ", read_len=" + QString::number(seg_content.length())
-            + ", str_len=" + QString::number(str_len);
+    //int str_len = seg_content.toStdU32String().length();
+
+    //QString msg = "len=" + QString::number(len) + ", read_len=" + QString::number(seg_content.length())
+    //        + ", str_len=" + QString::number(str_len);
     //QMessageBox::information(nullptr, "info", msg);
 
-#ifdef DEBUG_UPSEG
     qDebug() <<"***************************";
 
     qDebug() <<"upfileseg...";
     qDebug() <<"fileid: "<< m_fileid;
     qDebug() <<"md5: "<< seg_md5;
+    qDebug() <<"length:" << seg_content_std.length();
     //qDebug() <<"content: "<< seg_content;
 #endif
     Json::Value sendJson;
     sendJson["function"] = "upfileseg";
     sendJson["fileid"] = m_fileid;
     sendJson["md5"] = seg_md5.toStdString();
-    //sendJson["content"] = seg_content.toStdString();
+    //sendJson["content"] = seg_content_std;
+    sendJson["length"] = seg_content_std.length();
+
+    //std::string recv_seg = sendJson["content"].asString();
+    //qDebug() << "recv_seg len: "<< recv_seg.size();
+
     //### 用int数组存字符
+#if 0
     for(int i = 0; i < len; i++){
         sendJson["content"][i] = int(seg_ba[i]);
     }
-    QString sendbuf = sendJson.toStyledString().data();
+#endif
+    QByteArray sendbuf = sendJson.toStyledString().data();
     //ui->txtSend->setText(sendbuf);
 
-    sendData(sendbuf);     //发送数据
+
+#if 0
+    Json::CharReaderBuilder reader;
+    Json::Value recvJson;
+    JSONCPP_STRING errs;
+    std::stringstream ss(sendbuf.toStdString());
+    bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
+    int std_len = recvJson["content"].asString().length();
+    QString msg = "sbuf len :" + QString::number(sendJson.toStyledString().length())
+            + ",data len:" + QString::number(sendbuf.length())
+            + ",rbuf len:" + QString::number(recvJson.toStyledString().length())
+            + ",send len:" + QString::number(sendJson["content"].asString().length())
+            + ",recv len:" + QString::number(recvJson["content"].asString().length());
+    for(int i = 0; i < std_len; i++){
+        std::cout << int(recvJson["content"].asString()[i]) <<" ";
+    }
+    QMessageBox::warning(nullptr, "title", msg);
+#endif
+
+    sendFileData(sendbuf, seg_ba);     //发送数据
 }
 
 //删除文件

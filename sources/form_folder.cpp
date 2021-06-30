@@ -136,7 +136,8 @@ void FormFolder::onFileChanged(const QString &path)
          * 但程序运行至此，本地文件已被删除，无法获取长度。
          *********************************************/
         //## 同步：删除文件
-        emit rmfile(path);
+        int start = m_root_dir.length() + 1;    //截取相对路径
+        emit rmfile(path.mid(start));
 
         //刷新目录树
         if(m_autoUpd_flag)      //自动刷新
