@@ -428,6 +428,10 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
         QString upfile_str = m_filepath.mid(base_len) + CStr2LocalQStr(" *文件上传完成！");
         ui->progStatus->setValue(100);
         ui->lnStatus->setText(upfile_str);
+        QFileInfo file_info(m_filepath);
+        int total_len = file_info.size();
+        QString prog_str = getByteNumRatio(total_len, total_len);
+        ui->lnBytes->setText(prog_str);
         qDebug() <<"parse upfile clear!!!";
         clearUpfile();
 
@@ -479,6 +483,7 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
         ui->lnStatus->setText(status_str);
         ui->progStatus->setValue(100);
         QString prog_str = getByteNumRatio(total_len, total_len);
+        ui->lnBytes->setText(prog_str);
 #ifdef DEBUG_MSGBOX
         MyMessageBox::information("提示", "上传完成！");
 #endif
