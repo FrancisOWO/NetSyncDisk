@@ -430,6 +430,11 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
         ui->lnStatus->setText(upfile_str);
         qDebug() <<"parse upfile clear!!!";
         clearUpfile();
+
+        if(m_filepath == m_pFolder->m_last_path){
+            MyMessageBox::information("提示", "同步完成！");
+        }
+
         m_pFolder->SyncQDequeue();      //出队
         return;
     }
@@ -479,6 +484,10 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
 #endif
         qDebug() <<"parse upfileseg finish clear!!!";
         clearUpfile();
+
+        if(m_filepath == m_pFolder->m_last_path){
+            MyMessageBox::information("提示", "同步完成！");
+        }
 
         m_pFolder->SyncQDequeue();      //处理完成，出队
         return;

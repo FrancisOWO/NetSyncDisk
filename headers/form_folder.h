@@ -34,6 +34,8 @@ public:
     static const int SYNC_MKDIR = 2;
     static const int SYNC_RMDIR = 3;
 
+    QString m_last_path;
+
 public:
     QString getModeStr(int mode);
     void SyncQDequeue();

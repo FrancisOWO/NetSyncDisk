@@ -10,6 +10,9 @@
 #include <QFileInfoList>
 #include <QFileDialog>
 
+#include <QDateTime>
+#include <QTime>
+
 #include <QDebug>
 
 #include "tools.h"
@@ -372,8 +375,13 @@ static void WriteSyncLog(const QByteArray &out_ba)
     if(!qfout.open(QFile::ReadWrite)){
         return;
     }
+    QString time_str = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+    QByteArray write_ba = "[" + time_str.toLocal8Bit() + "]";
+    write_ba += out_ba;
+    write_ba += "\n";
+
     qfout.seek(qfout.size());
-    qfout.write(out_ba, out_ba.length());
+    qfout.write(write_ba, write_ba.length());
     qfout.close();
 }
 
@@ -390,7 +398,7 @@ void FormFolder::SyncQDequeue()
             <<" "<< getModeStr(temp_sync.mode);
     //写日志
     QString mode_str = getModeStr(temp_sync.mode);
-    QString out_str = temp_sync.path + " : " + mode_str + " END\n";
+    QString out_str = temp_sync.path + " : " + mode_str + " END";
     WriteSyncLog(out_str.toLocal8Bit());
 
     //处理同步请求
@@ -420,7 +428,7 @@ void FormFolder::ProcessSync()
 
     //写日志
     QString mode_str = getModeStr(temp_sync.mode);
-    QString out_str = temp_sync.path + " : " + mode_str + " START\n";
+    QString out_str = temp_sync.path + " : " + mode_str + " START";
     WriteSyncLog(out_str.toLocal8Bit());
 
     if(t_mode == SYNC_UPFILE || t_mode == SYNC_RMFILE){
@@ -517,6 +525,8 @@ void FormFolder::addFolderChilds(QTreeWidgetItem *pParent, const QString &absPat
         m_pFilesysWatcher->addPath(file_path);        //添加监视
         //同步文件
         SyncFileOrDir(file_path, SYNC_UPFILE);
+
+        m_last_path = file_path;
     }
 
     //添加下级目录
@@ -537,6 +547,8 @@ void FormFolder::addFolderChilds(QTreeWidgetItem *pParent, const QString &absPat
         m_pFilesysWatcher->addPath(dir_path);         //添加监视
         //同步目录
         SyncFileOrDir(dir_path, SYNC_MKDIR);
+
+        m_last_path = dir_path;
     }
 
 }
