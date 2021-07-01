@@ -38,6 +38,9 @@ void FormFolder::InitMembers()
     m_enq_enable = 1;
     m_autoUpd_flag = 0;
 
+    ui->treeFolder->setHeaderHidden(true);      //隐藏表头
+    ui->treeRemote->setHeaderHidden(true);
+
 }
 
 void FormFolder::InitConnections()
@@ -47,6 +50,7 @@ void FormFolder::InitConnections()
     connect(ui->pbtnUpdFolder, SIGNAL(clicked()), this, SLOT(updateFolderTree()));
 
     connect(ui->pbtnChooseFile, SIGNAL(clicked()), this, SLOT(chooseFile()));
+    connect(ui->pbtnChoRemoteFile, SIGNAL(clicked()), this, SLOT(chooseRemoteFile()));
 
     connect(ui->chkAutoUpd, SIGNAL(clicked()), this, SLOT(updateAutoUpdFlag()));
 
@@ -221,6 +225,22 @@ void FormFolder::chooseFile()
     //emit upfile(file_path);
 }
 
+//选择远程目录
+void FormFolder::chooseRemoteFile()
+{
+    //获取文件路径
+    QTreeWidgetItem *pNode = ui->treeRemote->currentItem();
+    QString file_path = pNode->text(0);     //远程文件路径
+    //设置路径
+    /*
+    QString abs_path = m_root_dir + "/" + file_path;
+    SyncFileOrDir(abs_path, SYNC_UPFILE);
+    */
+    ui->lnRemoteFilePath->setText(file_path);
+
+    emit downfile(file_path);
+}
+
 void FormFolder::updateAutoUpdFlag()
 {
     m_autoUpd_flag = ui->chkAutoUpd->isChecked();
@@ -262,9 +282,9 @@ void FormFolder::InitRemoteTree(Json::Value recvJson)
     if(recvJson.isMember("file")){
         int file_size = recvJson["file"].size();
         for(int i = 0; i < file_size; i++){
-            QString file_path = recvJson["file"][i].asCString();
+            QString file_path = QString::fromLocal8Bit(recvJson["file"][i].asString().c_str());
             qDebug() << file_path;
-            QTreeWidgetItem *pChild = new QTreeWidgetItem(QStringList() << file_path.toLocal8Bit());
+            QTreeWidgetItem *pChild = new QTreeWidgetItem(QStringList() << file_path);
             pChild->setCheckState(1, Qt::Checked);
             pRoot->addChild(pChild);
         }
@@ -414,6 +434,11 @@ void FormFolder::ProcessSync()
 //同步文件或目录
 void FormFolder::SyncFileOrDir(const QString &path, int mode)
 {
+    if(path.length() == 0)
+        return;
+    if(path[0] == "~")      //忽略临时文件
+        return;
+
     //入队
     StructSync temp_sync = {path, mode};
     m_sync_q.enqueue(temp_sync);

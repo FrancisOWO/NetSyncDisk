@@ -78,6 +78,7 @@ private slots:
     void onDirChanged(const QString &path);
 
     void chooseFile();
+    void chooseRemoteFile();
 
     void updateAutoUpdFlag();
 
@@ -88,8 +89,10 @@ signals:
     //void mkfile(const QString &file_path);    //新建文件
     void rmfile(const QString &file_path);      //删除文件
 
-    void mkdir(const QString &dir_path);    //新建目录
-    void rmdir(const QString &dir_path);    //删除目录
+    void mkdir(const QString &dir_path);        //新建目录
+    void rmdir(const QString &dir_path);        //删除目录
+
+    void downfile(const QString &file_path);    //下载文件
 
 };
 

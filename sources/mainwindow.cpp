@@ -104,6 +104,8 @@ void MainWindow::InitConnections()
     connect(m_pFolder, SIGNAL(rmdir(const QString &)), this, SLOT(sendDataRmdir(const QString &)));
     //分段传文件
     //connect(ui->pbtnUpfile, SIGNAL(clicked()), this, SLOT(upfileBySeg()));
+    //下载文件
+    connect(m_pFolder, SIGNAL(downfile(const QString &)), this, SLOT(sendDataDownfile(const QString &)));
 
 
     connect(m_server_sock, &QTcpSocket::connected, [=](){
@@ -520,9 +522,22 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
     qDebug() << "length:" << recvJson["length"].asInt();
     qDebug() << "md5:" << recvJson["md5"].asCString();
 
+    m_startbit = 0;
+    m_total_len = recvJson["length"].asInt();   //文件长度
+    m_fileid = recvJson["fileid"].asInt();      //文件id
+
     QString downfile_str = m_filepath + CStr2LocalQStr(" *文件下载中......");
     ui->lnStatus->setText(downfile_str);
+    //绝对路径（加'/'）
+    m_filepath = m_pFolder->getRootDir() + "/" + m_filepath;
 
+    //创建文件
+    QFile file_out(m_filepath);
+    file_out.open(QIODevice::WriteOnly);
+    file_out.close();
+
+    //开始下载
+    downfileNextSeg();
 }
 
 //下载文件片段
@@ -536,16 +551,51 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
      ************************************************/
     qDebug() << "function:" << recvJson["function"].asCString();
     qDebug() << "size:" << recvJson["size"].asInt();
-    qDebug() << "md5:" << recvJson["md5"].asInt();
+    qDebug() << "md5:" << recvJson["md5"].asCString();
 
     //本次下载的内容
     int size = recvJson["size"].asInt();
-    int offset = 2 + size + 1;
+    int offset = recvJson.toStyledString().size() + 1;
     QByteArray content_ba = str_ba.mid(offset);
     qDebug() <<"downseg len: "<< content_ba.length();
     if(size != content_ba.length()){
         MyMessageBox::critical("错误", "下载片段长度错误！");
+        return;
     }
+    else if(size == 0){
+        MyMessageBox::critical("错误", "下载长度为0！");
+        return;
+    }
+    //## 需校验片段的md5
+    if(m_startbit + size > m_total_len){       //下载出错
+        MyMessageBox::critical("错误", "下载长度错误！");
+        return;
+    }
+
+    //下载文件片段
+    downfileSeg(content_ba);
+
+    m_startbit += size;    //本段下载完成，更新起始位置
+    if(m_startbit == m_total_len){        //下载完成
+        QFileInfo file_info(m_filepath);
+        int total_len = file_info.size();
+        int base_len = m_pFolder->getRootDir().length() + 1;
+        QString status_str = m_filepath.mid(base_len)
+                + CStr2LocalQStr(" *文件下载完成！");
+        ui->lnStatus->setText(status_str);
+        ui->progStatus->setValue(100);
+        QString prog_str = getByteNumRatio(total_len, total_len);
+#if 1
+        MyMessageBox::information("提示", "下载完成！");
+#endif
+        qDebug() <<"parse downfileseg finish clear!!!";
+        clearUpfile();
+
+        //m_pFolder->SyncQDequeue();      //处理完成，出队
+        return;
+    }
+    //本段下载成功，下载下一段
+    downfileNextSeg();
 }
 
 //删除文件
@@ -615,8 +665,9 @@ void MainWindow::recvData()
     qDebug() << "read : "<< str;
     qDebug() << "len : "<< str.length();
 #endif
-    if(m_recv_status != STAT_UPSEG)
-        ui->txtRecv->setText(str_ba);
+    QString str = QString::fromLocal8Bit(str_ba);
+    if(m_recv_status != STAT_UPSEG && m_recv_status != STAT_DOWNSEG)
+        ui->txtRecv->setText(str);
 
     qDebug() <<"recvJson len: "<< str_ba.length() <<" "<< len;
 
@@ -952,11 +1003,14 @@ void MainWindow::sendDataDownfile(const QString &file_path)
     sendJson["function"] = "downfile";
     sendJson["path"] = file_path.toStdString();
 
+    m_filepath = file_path;
+    qDebug() << "file_path: " << m_filepath;
+
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
     QByteArray sendba = QStr2LocalBa(sendbuf);
-    m_recv_status = STAT_WAIT;
+    m_recv_status = STAT_DOWNSEG;
     sendData(sendba);     //发送数据
 }
 
@@ -985,6 +1039,71 @@ void MainWindow::sendDataDownfileseg(const QString &file_path, qint64 start_bit,
     QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_WAIT;
     sendData(sendba);     //发送数据
+}
+
+//下载文件片段
+void MainWindow::downfileSeg(const QByteArray &content_ba)
+{
+    qint64 start_bit = m_startbit;
+    QString file_path = m_filepath;
+    int len = content_ba.length();
+
+
+    qDebug() <<"down file seg......";
+    QFile file_out(file_path);
+    if(!file_out.open(QIODevice::ReadWrite)){
+        qDebug() << CStr2LocalQStr("文件打开失败！") << file_path.toLocal8Bit();
+        return;
+    }
+    qDebug() <<"*****************************************"<< len;
+    qDebug() <<"filepath:" << m_filepath << " startbit:" << start_bit <<" len:"<< len;
+
+    file_out.seek(start_bit);    //移动文件指针
+    file_out.write(content_ba, len);    //写入文件
+    file_out.close();        //关闭文件
+}
+
+//分段下载文件
+void MainWindow::downfileNextSeg()
+{
+    if(m_filepath.length() == 0){
+        MyMessageBox::critical("错误", "未选择文件！");
+        m_recv_status = STAT_WAIT;
+        return;
+    }
+
+    const int buf_len = 4096;
+    int one_recv_len = buf_len;
+
+    qint64 total_len = m_total_len;
+    qint64 remain_len = total_len - m_startbit;
+    if(remain_len > 0){
+        static QTime qtime_0 = QTime::currentTime();
+
+        //下载文件片段
+        if(remain_len < one_recv_len)
+            one_recv_len = remain_len;
+        sendDataDownfileseg(m_filepath, m_startbit, one_recv_len);
+
+        QTime qtime_1 = QTime::currentTime();
+        if(qtime_1.second() != qtime_0.second()){
+            qtime_0 = qtime_1;
+            qDebug() << CStr2LocalQStr("已下载") << QString::number(m_startbit)
+                     << CStr2LocalQStr("字节，剩余") << QString::number(remain_len)
+                     << CStr2LocalQStr("字节");
+
+            //## 进度条
+            QString bcnt_str = getByteNumRatio(m_startbit, total_len);
+            ui->lnBytes->setText(bcnt_str);
+            int prog_val = 100*m_startbit/total_len;
+            ui->progStatus->setValue(prog_val);
+        }
+        m_recv_status = STAT_WAIT;
+    }
+    else {
+        MyMessageBox::critical("错误", "下载字节数为0！");
+        return;
+    }
 }
 
 //删除文件
@@ -1070,7 +1189,6 @@ void MainWindow::sendDataRmdir(const QString &dir_path)
     m_recv_status = STAT_RMDIR;
     sendData(sendba);     //发送数据
 }
-
 
 //窗口关闭
 void MainWindow::closeEvent(QCloseEvent *event)

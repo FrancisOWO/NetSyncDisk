@@ -35,6 +35,7 @@ public:
     static const int STAT_RMFILE    = 5;
     static const int STAT_MKDIR     = 6;
     static const int STAT_RMDIR     = 7;
+    static const int STAT_DOWNSEG   = 8;
 
     static const int CONN_NO    = 0;
     static const int CONN_ING   = 1;
@@ -57,6 +58,7 @@ private:
     int m_fileid;
 
     qint64 m_startbit;
+    qint64 m_total_len;
 
     QString m_username;
     QString m_filepath;
@@ -113,6 +115,9 @@ private slots:
 
     void sendDataUpfile(const QString &file_path);      //发送上传文件数据
     void sendDataUpfileseg(const QString &file_path, qint64 m_startbit, int len);    //发送文件片段数据
+
+    void downfileSeg(const QByteArray &content_ba);     //下载文件片段
+    void downfileNextSeg();     //下载下一段文件
 
     void sendDataRmfile(const QString &file_path);  //删除文件
     void sendDataMkdir(const QString &dir_path);    //创建目录

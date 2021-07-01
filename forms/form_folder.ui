@@ -366,6 +366,27 @@
        </spacer>
       </item>
       <item row="0" column="3">
+       <widget class="QLineEdit" name="lnRemoteFilePath">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
        <widget class="QPushButton" name="pbtnChoRemoteFile">
         <property name="minimumSize">
          <size>
