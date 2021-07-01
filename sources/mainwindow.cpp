@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     InitMembers();
     InitConnections();
+
 }
 
 MainWindow::~MainWindow()
@@ -75,8 +76,8 @@ void MainWindow::InitConnections()
 {
     connect(ui->pbtnConnect, SIGNAL(clicked()), this, SLOT(connectServer()));
     connect(ui->pbtnDisconnect, SIGNAL(clicked()), this, SLOT(disconnectServer()));
-    connect(ui->pbtnSend, SIGNAL(clicked()), this, SLOT(sendData()));
-    connect(ui->pbtnRecv, SIGNAL(clicked()), this, SLOT(recvData()));
+    connect(ui->pbtnSend, SIGNAL(clicked()), this, SLOT(sendDataFromBox()));
+    connect(ui->pbtnRecv, SIGNAL(clicked()), this, SLOT(recvDataFromBox()));
 
     //打开子窗口
     connect(ui->pbtnRegister, SIGNAL(clicked()), this, SLOT(openRegisterPage()));
@@ -84,9 +85,14 @@ void MainWindow::InitConnections()
     connect(ui->pbtnFolder, SIGNAL(clicked()), this, SLOT(openFolderPage()));
 
     //发送数据
+    //注册
     connect(m_pRegister, SIGNAL(completed()), this, SLOT(sendDataRegister()));
+    //登录
     connect(m_pLogin, SIGNAL(completed()), this, SLOT(sendDataLogin()));
+    //登出
     connect(ui->pbtnLogout, SIGNAL(clicked()), this, SLOT(sendDataLogout()));
+    //请求目录
+    connect(ui->pbtnAskPath, SIGNAL(clicked()), this, SLOT(sendDataAskAllPath()));
 
     //上传文件
     connect(m_pFolder, SIGNAL(upfile(const QString &)), this, SLOT(sendDataUpfile(const QString &)));
@@ -97,7 +103,7 @@ void MainWindow::InitConnections()
     //删除目录
     connect(m_pFolder, SIGNAL(rmdir(const QString &)), this, SLOT(sendDataRmdir(const QString &)));
     //分段传文件
-    connect(ui->pbtnUpfile, SIGNAL(clicked()), this, SLOT(upfileBySeg()));
+    //connect(ui->pbtnUpfile, SIGNAL(clicked()), this, SLOT(upfileBySeg()));
 
 
     connect(m_server_sock, &QTcpSocket::connected, [=](){
@@ -141,8 +147,10 @@ void MainWindow::clearUserid()
 void MainWindow::clearUpfile()
 {
     m_fileid = -1;
-    m_start_bit = 0;
-    m_file_path.clear();
+    m_startbit = 0;
+
+    qDebug() <<"!!! clear path:" << m_filepath;
+    m_filepath.clear();
 }
 
 void MainWindow::InitSocket()
@@ -263,7 +271,7 @@ void MainWindow::sendFileData(const QByteArray &json_ba, const QByteArray &conte
 }
 
 //发送数据（读文本框）
-void MainWindow::sendData()
+void MainWindow::sendDataFromBox()
 {
     QString content = ui->txtSend->toPlainText();
     unsigned short len = (unsigned short)(content.length());
@@ -310,20 +318,20 @@ void MainWindow::sendData(const QString &content)
 #endif
 
 //解析从服务端收到的消息
-void MainWindow::parseJson(const QString &str)
+void MainWindow::parseJson(const QByteArray &str_ba)
 {
     Json::CharReaderBuilder reader;
     Json::Value recvJson;
     JSONCPP_STRING errs;
-    std::stringstream ss(str.toStdString());
+    std::stringstream ss(str_ba.toStdString());
     bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
     if (!res || !errs.empty()) {
         qDebug() << "recv error!";
         return;
     }
-#ifdef DEBUG_UPSEG
+
     qDebug() << "function:" << recvJson["function"].asCString();
-#endif
+
     //根据function进行解析
     if(recvJson["function"] == "register"){
         parseJsonRegister(recvJson);
@@ -337,15 +345,26 @@ void MainWindow::parseJson(const QString &str)
     else if(recvJson["function"] ==  "upfileseg"){
         parseJsonUpfileseg(recvJson);
     }
-    else if(recvJson["function"] ==  "rmfile"){
-        parseJsonRmfile(recvJson);
+    else if(recvJson["function"] ==  "rmfileok"){
+        parseJsonRmfileOK(recvJson);
     }
-    else if(recvJson["function"] ==  "mkdir"){
-        parseJsonMkdir(recvJson);
+    else if(recvJson["function"] ==  "mkdirok"){
+        parseJsonMkdirOK(recvJson);
     }
-    else if(recvJson["function"] ==  "rmdir"){
-        parseJsonRmdir(recvJson);
+    //rmdirok已经和rmfileok合并
+    else if(recvJson["function"] ==  "rmdirok"){
+        parseJsonRmdirOK(recvJson);
     }
+    else if(recvJson["function"] ==  "askallpath"){
+        parseJsonAskAllPath(recvJson);
+    }
+    else if(recvJson["function"] ==  "downfile"){
+        parseJsonDownfile(recvJson);
+    }
+    else if(recvJson["function"] ==  "downfileseg"){
+        parseJsonDownfileseg(recvJson, str_ba);
+    }
+
 }
 
 //注册
@@ -374,9 +393,16 @@ void MainWindow::parseJsonLogin(const Json::Value &recvJson)
         MyMessageBox::information("提示", "登录成功！");
         m_userid = recvJson["userid"].asInt();
         setUsername();
+
+        //清空请求队列
+        m_pFolder->SyncQClear();
     }
     else {
-        MyMessageBox::critical("错误", "登录失败！用户名或密码不正确！");
+        if(0 == status)
+            MyMessageBox::critical("错误", "登录失败！用户不存在！");
+        else {
+            MyMessageBox::critical("错误", "登录失败！密码错误！");
+        }
         clearUserid();
         clearUsername();
     }
@@ -389,19 +415,31 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
     qDebug() << "function:" << recvJson["function"].asCString();
     qDebug() << "fileid:" << recvJson["fileid"].asInt();
     qDebug() << "startbit:" << recvJson["startbit"].asInt();
+    qDebug() << "status: "<< recvJson["status"].asInt();
+    qDebug() << "1.file_path: "<< m_filepath;
 
     int status = recvJson["status"].asInt();
     if(0 == status){    //已同步，无需上传
-        MyMessageBox::information("提示", "已同步，无需上传！");
+        qDebug() << m_filepath << CStr2LocalQStr("已同步，无需上传！");
+        //MyMessageBox::information("提示", "已同步，无需上传！");
+        int base_len = m_pFolder->getRootDir().length() + 1;
+        QString upfile_str = m_filepath.mid(base_len) + CStr2LocalQStr(" *文件上传完成！");
+        ui->progStatus->setValue(100);
+        ui->lnStatus->setText(upfile_str);
+        qDebug() <<"parse upfile clear!!!";
         clearUpfile();
+        m_pFolder->SyncQDequeue();      //出队
         return;
     }
     m_fileid = recvJson["fileid"].asInt();
-    m_start_bit = recvJson["startbit"].asInt();
+    m_startbit = recvJson["startbit"].asInt();
+
+    qDebug() << "2.file_path: "<< m_filepath;
+
     m_recv_status = STAT_WAIT;    //清标志位
 
     int base_len = m_pFolder->getRootDir().length() + 1;
-    QString upfile_str = m_file_path.mid(base_len) + CStr2LocalQStr(" *文件上传中......");
+    QString upfile_str = m_filepath.mid(base_len) + CStr2LocalQStr(" *文件上传中......");
     ui->lnStatus->setText(upfile_str);
     //开始上传
     upfileBySeg();
@@ -419,20 +457,28 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
 
     if(!segtrue){       //本段上传失败
         MyMessageBox::critical("提示", "传输出错！");
+        qDebug() <<"parse upfileseg segwrong clear!!!";
         clearUpfile();
+
+        m_pFolder->SyncQDequeue();      //处理完成，出队
         return;
     }
     else if(finish) {        //上传完成
-        QFileInfo file_info(m_file_path);
+        QFileInfo file_info(m_filepath);
         int total_len = file_info.size();
         int base_len = m_pFolder->getRootDir().length() + 1;
-        QString status_str = m_file_path.mid(base_len)
+        QString status_str = m_filepath.mid(base_len)
                 + CStr2LocalQStr(" *文件上传完成！");
         ui->lnStatus->setText(status_str);
         ui->progStatus->setValue(100);
         QString prog_str = getByteNumRatio(total_len, total_len);
+#ifdef DEBUG_MSGBOX
         MyMessageBox::information("提示", "上传完成！");
+#endif
+        qDebug() <<"parse upfileseg finish clear!!!";
         clearUpfile();
+
+        m_pFolder->SyncQDequeue();      //处理完成，出队
         return;
     }
     //## 发文件片段，不清标志位
@@ -441,36 +487,128 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
     upfileBySeg();
 }
 
-//删除文件
-void MainWindow::parseJsonRmfile(const Json::Value &recvJson)
+//请求目录
+void MainWindow::parseJsonAskAllPath(const Json::Value &recvJson)
 {
-    //int segtrue = recvJson["segtrue"].asInt();
-    //int finish = recvJson["finish"].asInt();
+    /************************************************
+    "function": "askallpath"
+    "path"[i]: 所有目录, 下标从0开始 例：1/dir1/
+    "file"[i]: 所有文件，下标从0开始 例：1/dir1/file1
+    "md5"[i]: 所有文件的md5，下标从0开始，和file一一对应
+     ************************************************/
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "path size:" << recvJson["path"].size();
+    qDebug() << "file size:" << recvJson["file"].size();
+
+    QString status_str = CStr2LocalQStr("目录获取完成！");
+    ui->lnStatus->setText(status_str);
+
+    m_pFolder->InitRemoteTree(recvJson);
+}
+
+//下载文件
+void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
+{
+    /************************************************
+    "function": "downfile"
+    "fileid":
+    "length":
+    "md5":
+     ************************************************/
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "fileid:" << recvJson["fileid"].asInt();
+    qDebug() << "length:" << recvJson["length"].asInt();
+    qDebug() << "md5:" << recvJson["md5"].asCString();
+
+    QString downfile_str = m_filepath + CStr2LocalQStr(" *文件下载中......");
+    ui->lnStatus->setText(downfile_str);
+
+}
+
+//下载文件片段
+void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteArray &str_ba)
+{
+    /************************************************
+    "function": "downfileseg",
+    "size" : ,
+    "md5" : "xxx"
+    [一个无意义字符][紧接着是一个buf的content]
+     ************************************************/
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "size:" << recvJson["size"].asInt();
+    qDebug() << "md5:" << recvJson["md5"].asInt();
+
+    //本次下载的内容
+    int size = recvJson["size"].asInt();
+    int offset = 2 + size + 1;
+    QByteArray content_ba = str_ba.mid(offset);
+    qDebug() <<"downseg len: "<< content_ba.length();
+    if(size != content_ba.length()){
+        MyMessageBox::critical("错误", "下载片段长度错误！");
+    }
+}
+
+//删除文件
+void MainWindow::parseJsonRmfileOK(const Json::Value &recvJson)
+{
+    /*******************************
+     "function": "rmfileok"
+     ******************************/
+    qDebug() << "function: "<< recvJson["function"].asCString();
+    m_pFolder->SyncQDequeue();      //处理完成，出队
 }
 
 //建立目录
-void MainWindow::parseJsonMkdir(const Json::Value &recvJson)
+void MainWindow::parseJsonMkdirOK(const Json::Value &recvJson)
 {
-
+    /*******************************
+     "function": "mkdirok"
+     ******************************/
+    qDebug() << "function: "<< recvJson["function"].asCString();
+    m_pFolder->SyncQDequeue();      //处理完成，出队
 }
 
-//删除目录
-void MainWindow::parseJsonRmdir(const Json::Value &recvJson)
+//删除目录（废弃，已和删除文件合并）
+void MainWindow::parseJsonRmdirOK(const Json::Value &recvJson)
 {
+    /*******************************
+     "function": "rmdirok"
+     ******************************/
+    qDebug() << "function: "<< recvJson["function"].asCString();
+    m_pFolder->SyncQDequeue();      //处理完成，出队
+}
 
+//接收数据（读文本框）
+void MainWindow::recvDataFromBox()
+{
+    QByteArray str_ba = ui->txtRecv->toPlainText().toLocal8Bit();
+    qDebug() <<"recvData len: "<< str_ba.length();
+
+#ifdef DEBUG_UPSEG
+    qDebug() << "recv len: "<< len;
+    qDebug() << "read : "<< str;
+    qDebug() << "len : "<< str.length();
+#endif
+    qDebug() <<"recvJson len: "<< str_ba.length();
+
+    parseJson(str_ba);
 }
 
 //接收数据
 void MainWindow::recvData()
 {
-    QByteArray str = m_server_sock->readAll();
+    QByteArray str_ba = m_server_sock->readAll();
+    qDebug() <<"recvData len: "<< str_ba.length();
+
     //长度
     unsigned short len, len0, len1;
-    len0 = (unsigned short)str[0];
-    len1 = (unsigned short)str[1];
+    len0 = (unsigned short)(uchar)str_ba[0];
+    len1 = (unsigned short)(uchar)str_ba[1];
     len = len0 + (len1 << 8);
+
+    qDebug() <<"B0: "<< len0 <<", B1: " << len1 <<", len: "<< len;
     //内容
-    str = str.mid(2, len);
+    str_ba = str_ba.mid(2, len);
 
 #ifdef DEBUG_UPSEG
     qDebug() << "recv len: "<< len;
@@ -478,9 +616,11 @@ void MainWindow::recvData()
     qDebug() << "len : "<< str.length();
 #endif
     if(m_recv_status != STAT_UPSEG)
-        ui->txtRecv->setText(str);
+        ui->txtRecv->setText(str_ba);
 
-    parseJson(str);
+    qDebug() <<"recvJson len: "<< str_ba.length() <<" "<< len;
+
+    parseJson(str_ba);
 
 }
 
@@ -586,25 +726,25 @@ void MainWindow::sendDataLogout()
 //分段上传文件
 void MainWindow::upfileBySeg()
 {
-    if(m_file_path.length() == 0){
+    if(m_filepath.length() == 0){
         MyMessageBox::critical("错误", "未选择文件！");
         m_recv_status = STAT_WAIT;
         return;
     }
-    QFileInfo file_info(m_file_path);
+    QFileInfo file_info(m_filepath);
     qint64 total_len = file_info.size();
 #ifdef DEBUG_UPSEG
     qDebug() << CStr2LocalQStr("文件长度：") + QString::number(total_len);
 #endif
     const int buf_len = 4096;
     int one_send_len = buf_len;
-    qint64 remain_len = total_len - m_start_bit;
+    qint64 remain_len = total_len - m_startbit;
 
     static QTime qtime_0 = QTime::currentTime();
     if(remain_len > 0){
         if(one_send_len > remain_len)
             one_send_len = int(remain_len);
-        sendDataUpfileseg(m_file_path, m_start_bit, one_send_len);
+        sendDataUpfileseg(m_filepath, m_startbit, one_send_len);
 
         //m_start_bit += one_send_len;
         //remain_len -= one_send_len;
@@ -616,20 +756,22 @@ void MainWindow::upfileBySeg()
         QTime qtime_1 = QTime::currentTime();
         if(qtime_1.second() != qtime_0.second()){
             qtime_0 = qtime_1;
-            qDebug() << CStr2LocalQStr("") << QString::number(m_start_bit)
+            qDebug() << CStr2LocalQStr("") << QString::number(m_startbit)
                      << CStr2LocalQStr("字节，剩余") << QString::number(remain_len)
                      << CStr2LocalQStr("字节");
 
             //## 进度条
-            QString bcnt_str = getByteNumRatio(m_start_bit, total_len);
+            QString bcnt_str = getByteNumRatio(m_startbit, total_len);
             ui->lnBytes->setText(bcnt_str);
-            int prog_val = 100*m_start_bit/total_len;
+            int prog_val = 100*m_startbit/total_len;
             ui->progStatus->setValue(prog_val);
         }
         m_recv_status = STAT_UPSEG;
     }
     else {
+        qDebug() <<"upfilebyseg clear!!!";
         clearUpfile();
+        MyMessageBox::critical("错误", "本次上传0字节！");
         m_recv_status = STAT_WAIT;
     }
 }
@@ -637,11 +779,14 @@ void MainWindow::upfileBySeg()
 //上传文件
 void MainWindow::sendDataUpfile(const QString &file_path)
 {
+    qDebug() << "sendDataUpfile" << file_path;
+
     //用户未登录
     if(!isLoginUser())
         return;
     QString full_path = m_pFolder->getRootDir() + "/" + file_path;
-    m_file_path = full_path;
+    m_filepath = full_path;
+    //QMessageBox::information(nullptr, "info", full_path);
 
     QFileInfo file_info(full_path);
     quint64 file_size = file_info.size();
@@ -671,6 +816,7 @@ void MainWindow::sendDataUpfile(const QString &file_path)
     ui->txtSend->setText(sendbuf);
 
     QByteArray sendba = QStr2LocalBa(sendbuf);
+
     m_recv_status = STAT_UPFILE;
     sendData(sendba);     //发送数据
 }
@@ -695,7 +841,7 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
     QByteArray seg_ba = file_in.read(len);     //读取文件
     file_in.close();        //关闭文件
 
-    m_start_bit += seg_ba.length();
+    m_startbit += seg_ba.length();
 
     //QByteArray是字节流，不能直接转QString，否则'\0'之后都会被过滤
     //QTextCodec *codec = QTextCodec::codecForName("KOI8-R");
@@ -767,6 +913,80 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
     sendFileData(sendba, seg_ba);     //发送数据
 }
 
+//请求目录
+void MainWindow::sendDataAskAllPath()
+{
+    /********************************
+    "function": "askallpath"
+     *******************************/
+    qDebug() << "askallpath";
+
+    //用户未登录
+    if(!isLoginUser())
+        return;
+    Json::Value sendJson;
+    sendJson["function"] = "askallpath";
+
+    QString sendbuf = sendJson.toStyledString().data();
+    ui->txtSend->setText(sendbuf);
+
+    QByteArray sendba = QStr2LocalBa(sendbuf);
+    m_recv_status = STAT_WAIT;
+    sendData(sendba);     //发送数据
+
+}
+
+//下载文件
+void MainWindow::sendDataDownfile(const QString &file_path)
+{
+    /********************************
+    "function": "downfile",
+    "path": "1/2/test.txt"
+     *******************************/
+    qDebug() << "downfile";
+
+    //用户未登录
+    if(!isLoginUser())
+        return;
+    Json::Value sendJson;
+    sendJson["function"] = "downfile";
+    sendJson["path"] = file_path.toStdString();
+
+    QString sendbuf = sendJson.toStyledString().data();
+    ui->txtSend->setText(sendbuf);
+
+    QByteArray sendba = QStr2LocalBa(sendbuf);
+    m_recv_status = STAT_WAIT;
+    sendData(sendba);     //发送数据
+}
+
+//下载文件片段
+void MainWindow::sendDataDownfileseg(const QString &file_path, qint64 start_bit, int len)
+{
+    /********************************
+    "function": "downfileseg",
+    "fileid": 52,
+    "startbit": 0,
+    "size": 4096
+     *******************************/
+    qDebug() << "downfileseg";
+    //用户未登录
+    if(!isLoginUser())
+        return;
+    Json::Value sendJson;
+    sendJson["function"] = "downfileseg";
+    sendJson["fileid"] = m_fileid;
+    sendJson["startbit"] = start_bit;
+    sendJson["size"] = len;
+
+    QString sendbuf = sendJson.toStyledString().data();
+    ui->txtSend->setText(sendbuf);
+
+    QByteArray sendba = QStr2LocalBa(sendbuf);
+    m_recv_status = STAT_WAIT;
+    sendData(sendba);     //发送数据
+}
+
 //删除文件
 void MainWindow::sendDataRmfile(const QString &file_path)
 {
@@ -806,7 +1026,7 @@ void MainWindow::sendDataMkdir(const QString &dir_path)
     QByteArray sendba = QStr2LocalBa(sendbuf);
 
     //### 测试中文编码转回
-#if 0
+#if 1
     Json::CharReaderBuilder reader;
     Json::Value recvJson;
     JSONCPP_STRING errs;
@@ -850,6 +1070,7 @@ void MainWindow::sendDataRmdir(const QString &dir_path)
     m_recv_status = STAT_RMDIR;
     sendData(sendba);     //发送数据
 }
+
 
 //窗口关闭
 void MainWindow::closeEvent(QCloseEvent *event)

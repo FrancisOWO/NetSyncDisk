@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>641</width>
+    <width>742</width>
     <height>727</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_4">
-   <item row="0" column="0">
+  <layout class="QGridLayout" name="gridLayout_5">
+   <item row="0" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_2">
      <property name="minimumSize">
       <size>
@@ -74,7 +74,7 @@
         </item>
        </layout>
       </item>
-      <item row="0" column="2">
+      <item row="0" column="1">
        <widget class="QPushButton" name="pbtnChooseRoot">
         <property name="minimumSize">
          <size>
@@ -92,19 +92,25 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="6">
-       <widget class="QCheckBox" name="chkAutoUpd">
+      <item row="0" column="2">
+       <widget class="QPushButton" name="pbtnChgRoot">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
         <property name="font">
          <font>
           <pointsize>10</pointsize>
          </font>
         </property>
         <property name="text">
-         <string>自动刷新</string>
+         <string>更换目录</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="4">
+      <item row="0" column="3">
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -117,7 +123,7 @@
         </property>
        </spacer>
       </item>
-      <item row="0" column="5">
+      <item row="0" column="4">
        <widget class="QPushButton" name="pbtnUpdFolder">
         <property name="minimumSize">
          <size>
@@ -135,8 +141,20 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="3">
-       <widget class="QPushButton" name="pbtnChgRoot">
+      <item row="0" column="5">
+       <widget class="QCheckBox" name="chkAutoUpd">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>自动刷新</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QPushButton" name="pbtnClearQ">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -149,7 +167,7 @@
          </font>
         </property>
         <property name="text">
-         <string>更换目录</string>
+         <string>清空队列</string>
         </property>
        </widget>
       </item>
@@ -176,14 +194,14 @@
       </font>
      </property>
      <property name="title">
-      <string>目录</string>
+      <string>本地目录</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
        <widget class="QTreeWidget" name="treeFolder">
         <property name="minimumSize">
          <size>
-          <width>500</width>
+          <width>250</width>
           <height>0</height>
          </size>
         </property>
@@ -203,7 +221,54 @@
      </layout>
     </widget>
    </item>
-   <item row="2" column="0">
+   <item row="1" column="1">
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>500</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>500</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>远程目录</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="0">
+       <widget class="QTreeWidget" name="treeRemote">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <column>
+         <property name="text">
+          <string notr="true">1</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_3">
      <property name="minimumSize">
       <size>
@@ -273,7 +338,7 @@
        <widget class="QPushButton" name="pbtnChooseFile">
         <property name="minimumSize">
          <size>
-          <width>0</width>
+          <width>110</width>
           <height>30</height>
          </size>
         </property>
@@ -283,7 +348,7 @@
          </font>
         </property>
         <property name="text">
-         <string>选中文件</string>
+         <string>选中本地文件</string>
         </property>
        </widget>
       </item>
@@ -299,6 +364,24 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="pbtnChoRemoteFile">
+        <property name="minimumSize">
+         <size>
+          <width>110</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>选中远程文件</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

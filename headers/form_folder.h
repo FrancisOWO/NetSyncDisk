@@ -5,10 +5,17 @@
 #include <QString>
 #include <QTreeWidgetItem>
 #include <QFileSystemWatcher>
+#include <QQueue>
+#include "json.h"
 
 namespace Ui {
 class FormFolder;
 }
+
+struct StructSync {
+    QString path;
+    int mode;
+};
 
 class FormFolder : public QWidget
 {
@@ -22,10 +29,20 @@ public:
     QString getRootDir();
 
 public:
-    static const int SYNC_UPFLIE = 0;
+    static const int SYNC_UPFILE = 0;
     static const int SYNC_RMFILE = 1;
+    static const int SYNC_MKDIR = 2;
+    static const int SYNC_RMDIR = 3;
+
+public:
+    QString getModeStr(int mode);
+    void SyncQDequeue();
 
 public slots:
+    void SyncQClear();
+
+    void InitRemoteTree(Json::Value recvJson);
+
     void InitFolderTree();
     void updateFolderTree();
 
@@ -36,17 +53,24 @@ private:
 
     QFileSystemWatcher *m_pFilesysWatcher;
 
+    QQueue<StructSync> m_sync_q;
+    bool m_enq_enable;
+
 private:
     void InitMembers();
     void InitConnections();
 
-    void SyncFile(const QString &file_path);
-    void SyncDir(const QString &dir_path);
+    void ProcessSync();
+
+    void SyncFileOrDir(const QString &path, int mode);
+    void SyncFile(const QString &file_path, int mode = SYNC_UPFILE);
+    void SyncDir(const QString &dir_path, int mode = SYNC_MKDIR);
 
     void addFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
     void updateFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
 
 private slots:
+
     void chooseRootDir();
     void changeRootDir();
 

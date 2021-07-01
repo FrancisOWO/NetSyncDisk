@@ -56,10 +56,10 @@ private:
     int m_userid;
     int m_fileid;
 
-    qint64 m_start_bit;
+    qint64 m_startbit;
 
     QString m_username;
-    QString m_file_path;
+    QString m_filepath;
 
 private:
     void InitMembers();
@@ -69,15 +69,21 @@ private:
     bool isLoginUser();
     void setConStatus(int status);
 
-    void parseJson(const QString &str);
+    void parseJson(const QByteArray &str_ba);
 
     void parseJsonRegister(const Json::Value &recvJson);
     void parseJsonLogin(const Json::Value &recvJson);
+
     void parseJsonUpfile(const Json::Value &recvJson);
     void parseJsonUpfileseg(const Json::Value &recvJson);
-    void parseJsonRmfile(const Json::Value &recvJson);
-    void parseJsonMkdir(const Json::Value &recvJson);
-    void parseJsonRmdir(const Json::Value &recvJson);
+
+    void parseJsonRmfileOK(const Json::Value &recvJson);
+    void parseJsonMkdirOK(const Json::Value &recvJson);
+    void parseJsonRmdirOK(const Json::Value &recvJson);
+
+    void parseJsonAskAllPath(const Json::Value &recvJson);
+    void parseJsonDownfile(const Json::Value &recvJson);
+    void parseJsonDownfileseg(const Json::Value &recvJson, const QByteArray &str_ba);
 
 private slots:
     void setUsername();
@@ -91,9 +97,9 @@ private slots:
     void sendFileData(const QByteArray &json_ba, const QByteArray &content_ba);
     void sendData(const QByteArray &content_ba);    //发送数据
     //void sendData(const QString &content);    //发送数据
-    void sendData();    //发送数据（读文本框）
-
+    void sendDataFromBox();    //发送数据（读文本框）
     void recvData();    //接收数据
+    void recvDataFromBox();     //接收数据（读文本框）
 
     void openRegisterPage();
     void openLoginPage();
@@ -106,11 +112,15 @@ private slots:
     void upfileBySeg();         //分段上传文件
 
     void sendDataUpfile(const QString &file_path);      //发送上传文件数据
-    void sendDataUpfileseg(const QString &file_path, qint64 m_start_bit, int len);    //发送文件片段数据
+    void sendDataUpfileseg(const QString &file_path, qint64 m_startbit, int len);    //发送文件片段数据
 
     void sendDataRmfile(const QString &file_path);  //删除文件
     void sendDataMkdir(const QString &dir_path);    //创建目录
     void sendDataRmdir(const QString &dir_path);    //删除目录
+
+    void sendDataAskAllPath();      //请求目录
+    void sendDataDownfile(const QString &file_path);    //下载文件
+    void sendDataDownfileseg(const QString &file_path, qint64 m_startbit, int len);    //下载文件片段
 
 };
 #endif // MAINWINDOW_H

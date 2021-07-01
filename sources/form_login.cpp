@@ -54,15 +54,13 @@ void FormLogin::submitForm()
         ui->lnPwd->setFocus();
         return;
     }
-    //用户名或密码格式出错
-    else if(ULimits::UNAME_OK != ULimits::checkUname(username) ||
-            ULimits::PWD_OK != ULimits::checkPwd(password)){
-        MyMessageBox::critical("错误", "用户名或密码错误！");
-        return;
+    //用户名格式出错
+    else if(ULimits::UNAME_OK != ULimits::checkUname(username)){
+        MyMessageBox::critical("错误", "登录失败！用户不存在！");
     }
-    //经数据库查询，用户名或密码错误
-    else if(0){
-        MyMessageBox::critical("错误", "用户名或密码错误！");
+    //密码格式错误
+    else if (ULimits::PWD_OK != ULimits::checkPwd(password)){
+        MyMessageBox::critical("错误", "登录失败！密码错误！");
         return;
     }
     //输入格式正确

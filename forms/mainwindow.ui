@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>586</width>
-    <height>763</height>
+    <height>809</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -217,7 +217,7 @@
       </property>
      </spacer>
     </item>
-    <item row="2" column="0" colspan="4">
+    <item row="2" column="0" colspan="3">
      <layout class="QGridLayout" name="gridLayout_4">
       <item row="0" column="0" rowspan="2">
        <widget class="QGroupBox" name="groupBox">
@@ -288,7 +288,7 @@
       </item>
      </layout>
     </item>
-    <item row="3" column="0" colspan="4">
+    <item row="3" column="0" colspan="3">
      <layout class="QGridLayout" name="gridLayout_5">
       <item row="0" column="0" rowspan="2">
        <widget class="QGroupBox" name="groupBox_2">
@@ -370,8 +370,8 @@
        <string>工具</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_6">
-       <item row="0" column="3">
-        <widget class="QPushButton" name="pbtnFolder">
+       <item row="0" column="0">
+        <widget class="QPushButton" name="pbtnRegister">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -390,7 +390,7 @@
           </font>
          </property>
          <property name="text">
-          <string>目录</string>
+          <string>注册</string>
          </property>
         </widget>
        </item>
@@ -418,30 +418,6 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="4">
-        <widget class="QPushButton" name="pbtnUpfile">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="sizeIncrement">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>发文件</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="2">
         <widget class="QPushButton" name="pbtnLogout">
          <property name="minimumSize">
@@ -466,8 +442,8 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QPushButton" name="pbtnRegister">
+       <item row="0" column="3">
+        <widget class="QPushButton" name="pbtnFolder">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -486,7 +462,31 @@
           </font>
          </property>
          <property name="text">
-          <string>注册</string>
+          <string>目录</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="4">
+        <widget class="QPushButton" name="pbtnAskPath">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="sizeIncrement">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>请求目录</string>
          </property>
         </widget>
        </item>
