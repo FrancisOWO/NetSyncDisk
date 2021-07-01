@@ -36,7 +36,6 @@ void FormLogin::InitMembers()
 void FormLogin::InitConnections()
 {
     connect(ui->pbtnLogin, SIGNAL(clicked()), this, SLOT(submitForm()));
-
     connect(ui->chkPwdVis, SIGNAL(clicked()), this, SLOT(changePwdVis()));
 
 }

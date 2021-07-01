@@ -656,6 +656,10 @@ void MainWindow::recvData()
     len1 = (unsigned short)(uchar)str_ba[1];
     len = len0 + (len1 << 8);
 
+    //Ñ­»·¶Á
+    while(str_ba.length() - 2 < len){
+        str_ba += m_server_sock->readAll();
+    }
     qDebug() <<"B0: "<< len0 <<", B1: " << len1 <<", len: "<< len;
     //ÄÚÈÝ
     str_ba = str_ba.mid(2, len);
