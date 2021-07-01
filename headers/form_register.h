@@ -39,6 +39,8 @@ private:
 private slots:
     void submitForm();
 
+    void changePwd1Vis();
+    void changePwd2Vis();
 
 signals:
     void completed();

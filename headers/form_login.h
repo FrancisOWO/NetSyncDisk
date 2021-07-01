@@ -35,6 +35,8 @@ private:
 private slots:
     void submitForm();
 
+    void changePwdVis();
+
 signals:
     void completed();
 

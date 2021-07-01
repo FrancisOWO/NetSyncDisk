@@ -24,6 +24,8 @@ void FormLogin::InitMembers()
     ui->lnUsername->setText("test_user_1");
     ui->lnPwd->setText("123abcde_");
 
+    ui->lnPwd->setEchoMode(QLineEdit::Password);
+
     //限制输入长度
     const int uname_max_len = ULimits::uname_max_len;
     const int pwd_max_len = ULimits::pwd_max_len;
@@ -34,6 +36,20 @@ void FormLogin::InitMembers()
 void FormLogin::InitConnections()
 {
     connect(ui->pbtnLogin, SIGNAL(clicked()), this, SLOT(submitForm()));
+
+    connect(ui->chkPwdVis, SIGNAL(clicked()), this, SLOT(changePwdVis()));
+
+}
+
+void FormLogin::changePwdVis()
+{
+    bool flag = ui->chkPwdVis->isChecked();
+    if(flag) {
+        ui->lnPwd->setEchoMode(QLineEdit::Normal);
+    }
+    else {
+        ui->lnPwd->setEchoMode(QLineEdit::Password);
+    }
 }
 
 //提交登录表单

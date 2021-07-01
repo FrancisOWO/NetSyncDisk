@@ -25,6 +25,9 @@ void FormRegister::InitMembers()
     ui->lnPwd1->setText("123abcde_");
     ui->lnPwd2->setText("123abcde_");
 
+    ui->lnPwd1->setEchoMode(QLineEdit::Password);
+    ui->lnPwd2->setEchoMode(QLineEdit::Password);
+
     //限制输入长度
     const int uname_max_len = ULimits::uname_max_len;
     const int pwd_max_len = ULimits::pwd_max_len;
@@ -36,6 +39,9 @@ void FormRegister::InitMembers()
 void FormRegister::InitConnections()
 {
     connect(ui->pbtnRegister, SIGNAL(clicked()), this, SLOT(submitForm()));
+
+    connect(ui->chkPwd1Vis, SIGNAL(clicked()), this, SLOT(changePwd1Vis()));
+    connect(ui->chkPwd2Vis, SIGNAL(clicked()), this, SLOT(changePwd2Vis()));
 }
 
 int FormRegister::checkUname()
@@ -83,6 +89,29 @@ int FormRegister::checkPwd()
 
     return ULimits::PWD_OK;
 }
+
+void FormRegister::changePwd1Vis()
+{
+    bool flag = ui->chkPwd1Vis->isChecked();
+    if(flag) {
+        ui->lnPwd1->setEchoMode(QLineEdit::Normal);
+    }
+    else {
+        ui->lnPwd1->setEchoMode(QLineEdit::Password);
+    }
+}
+
+void FormRegister::changePwd2Vis()
+{
+    bool flag = ui->chkPwd2Vis->isChecked();
+    if(flag) {
+        ui->lnPwd2->setEchoMode(QLineEdit::Normal);
+    }
+    else {
+        ui->lnPwd2->setEchoMode(QLineEdit::Password);
+    }
+}
+
 
 //提交注册表单
 void FormRegister::submitForm()
