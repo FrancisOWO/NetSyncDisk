@@ -67,13 +67,15 @@ void MainWindow::InitMembers()
 
     InitSocket();
 
+    //自动连接服务器
+    connectServer();
 }
 
 void MainWindow::InitConnections()
 {
     connect(ui->pbtnConnect, SIGNAL(clicked()), this, SLOT(connectServer()));
     connect(ui->pbtnDisconnect, SIGNAL(clicked()), this, SLOT(disconnectServer()));
-    //connect(ui->pbtnSend, SIGNAL(clicked()), this, SLOT(sendData()));
+    connect(ui->pbtnSend, SIGNAL(clicked()), this, SLOT(sendData()));
     connect(ui->pbtnRecv, SIGNAL(clicked()), this, SLOT(recvData()));
 
     //打开子窗口
@@ -258,6 +260,21 @@ void MainWindow::sendFileData(const QByteArray &json_ba, const QByteArray &conte
     }
     QMessageBox::critical(nullptr, "title", msg);
 #endif
+}
+
+//发送数据（读文本框）
+void MainWindow::sendData()
+{
+    QString content = ui->txtSend->toPlainText();
+    unsigned short len = (unsigned short)(content.length());
+    QByteArray str_ba;
+    //长度
+    str_ba += (uchar)(0x00ff & len);
+    str_ba += (uchar)((0xff00 & len) >> 8);
+    //内容
+    str_ba += content;
+    //qDebug() << str;
+    m_server_sock->write(str_ba);
 }
 
 //发送数据

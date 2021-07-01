@@ -21,6 +21,10 @@ public:
     void setRootDir(const QString& dir);
     QString getRootDir();
 
+public:
+    static const int SYNC_UPFLIE = 0;
+    static const int SYNC_RMFILE = 1;
+
 public slots:
     void InitFolderTree();
     void updateFolderTree();
@@ -35,6 +39,9 @@ private:
 private:
     void InitMembers();
     void InitConnections();
+
+    void SyncFile(const QString &file_path);
+    void SyncDir(const QString &dir_path);
 
     void addFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
     void updateFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);

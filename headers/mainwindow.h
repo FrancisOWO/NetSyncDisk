@@ -91,6 +91,8 @@ private slots:
     void sendFileData(const QByteArray &json_ba, const QByteArray &content_ba);
     void sendData(const QByteArray &content_ba);    //发送数据
     //void sendData(const QString &content);    //发送数据
+    void sendData();    //发送数据（读文本框）
+
     void recvData();    //接收数据
 
     void openRegisterPage();

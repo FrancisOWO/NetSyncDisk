@@ -213,6 +213,30 @@ void FormFolder::updateAutoUpdFlag()
     }
 }
 
+void FormFolder::SyncFile(const QString &file_path)
+{
+    QFileInfo file_info(file_path);
+    if(file_info.size() == 0){
+        qDebug() << CStr2LocalQStr("空文件不同步！");
+        return;
+    }
+    //同步文件
+    SyncFile(file_path);
+    /*
+    int base_len = m_root_dir.length() + 1;
+    QString rel_path = file_path.mid(base_len);
+    emit upfile(rel_path);
+    */
+}
+
+void FormFolder::SyncDir(const QString &dir_path)
+{
+    //同步目录
+    int base_len = m_root_dir.length() + 1;
+    QString rel_path = dir_path.mid(base_len) + "/";
+    emit mkdir(rel_path);
+}
+
 void FormFolder::InitFolderTree()
 {
     qDebug() << CStr2LocalQStr("初始化目录");
@@ -284,6 +308,7 @@ void FormFolder::addFolderChilds(QTreeWidgetItem *pParent, const QString &absPat
         pParent->addChild(pChild);
 
         m_pFilesysWatcher->addPath(file_path);        //添加监视
+        //同步目录
 
     }
 
@@ -369,8 +394,11 @@ void FormFolder::updateFolderChilds(QTreeWidgetItem *pParent, const QString &abs
             qDebug() << CStr2LocalQStr("添加监视目录！") << dir_path;
             m_pFilesysWatcher->addPath(dir_path);        //添加监视
             //## 同步：新建目录
+            SyncDir(dir_path);
+            /*
             int start = m_root_dir.length() + 1;    //截取相对路径
             emit mkdir(dir_path.mid(start) + "/");
+            */
         }
     }
 
