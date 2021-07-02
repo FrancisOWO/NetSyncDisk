@@ -55,7 +55,6 @@ void MainWindow::InitMembers()
     clearUser();    //清空用户信息
     clearUpfile();
 
-
     setNotLoginUI();    //设置未登录界面
 
     m_pRegister = new FormRegister;
@@ -677,7 +676,7 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
 
 //下载文件片段
 void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteArray &str_ba)
-{
+{   
     /************************************************
     "function": "downfileseg",
     "size" : ,
@@ -720,6 +719,7 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
         ui->lnStatus->setText(status_str);
         ui->progStatus->setValue(100);
         QString prog_str = getByteNumRatio(total_len, total_len);
+        ui->lnBytes->setText(prog_str);
 #if 1
         MyMessageBox::information("提示", "下载完成！");
 #endif
@@ -790,12 +790,23 @@ void MainWindow::recvData()
     len0 = (unsigned short)(uchar)str_ba[0];
     len1 = (unsigned short)(uchar)str_ba[1];
     len = len0 + (len1 << 8);
+    qDebug() <<"B0: "<< len0 <<", B1: " << len1 <<", len: "<< len;
 
     //循环读
+    int cnt = 0;
     while(str_ba.length() - 2 < len){
-        str_ba += m_server_sock->readAll();
+        cnt++;
+        if(m_server_sock->waitForReadyRead()){
+            QByteArray read_ba = m_server_sock->readAll();
+            qDebug() << "one read len:" << read_ba.length();
+            str_ba += read_ba;
+        }
+        if(cnt > 5){
+            m_recv_status = STAT_ERROR;
+            MyMessageBox::critical("错误", "接收数据失败！");
+            return;
+        }
     }
-    qDebug() <<"B0: "<< len0 <<", B1: " << len1 <<", len: "<< len;
     //内容
     str_ba = str_ba.mid(2, len);
 
@@ -1184,7 +1195,7 @@ void MainWindow::sendDataDownfile(const QString &file_path)
     sendJson["function"] = "downfile";
     sendJson["path"] = file_path.toStdString();
 
-    m_filepath = file_path;
+    m_filepath = file_path + ".tmp";
     qDebug() << "file_path: " << m_filepath;
 
     QString sendbuf = sendJson.toStyledString().data();

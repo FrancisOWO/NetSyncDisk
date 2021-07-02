@@ -25,6 +25,7 @@ public:
     ~MainWindow();
 
 public:
+    static const int STAT_ERROR     = -1;
     static const int STAT_WAIT      = 0;
     static const int STAT_REGISTER  = 1;
     static const int STAT_LOGIN     = 2;

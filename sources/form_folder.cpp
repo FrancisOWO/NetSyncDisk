@@ -457,8 +457,8 @@ void FormFolder::SyncFileOrDir(const QString &path, int mode)
 {
     if(path.length() == 0)
         return;
-    if(path[0] == "~")      //忽略临时文件
-        return;
+    if(path[0] == "~" || path[0] == "." || path.endsWith(".tmp"))
+        return;     //忽略临时文件
 
     //入队
     StructSync temp_sync = {path, mode};
