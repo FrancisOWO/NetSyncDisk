@@ -491,7 +491,6 @@ QString FormFolder::getSyncLogPath()
 void FormFolder::WriteSyncLog(const QByteArray &out_ba)
 {
     QString filename = getSyncLogPath();
-    return;
     QFile qfout(filename);
     if(!qfout.open(QFile::ReadWrite)){
     }

@@ -205,6 +205,13 @@ void MainWindow::InitLogDir()
     return;
 }
 
+void MainWindow::hideSubWin()
+{
+    m_pFolder->hide();
+    m_pLogin->hide();
+    m_pRegister->hide();
+}
+
 void MainWindow::InitSocket()
 {
     m_server_sock = new QTcpSocket(this);
@@ -579,6 +586,7 @@ void MainWindow::parseJsonLogin(const Json::Value &recvJson)
         m_userid = recvJson["userid"].asInt();
         setUsername();
         setLoginUI();   //设置登录界面
+        hideSubWin();   //隐藏子窗口
         MyMessageBox::information("提示", "登录成功！");
 
         //清空请求队列
@@ -725,7 +733,15 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
     qDebug() << "length:" << recvJson["length"].asInt();
     qDebug() << "md5:" << recvJson["md5"].asCString();
 
+    int parse_len = recvJson["length"].asInt();
+
     m_startbit = 0;
+    QFileInfo file_info(m_filepath);
+    if(file_info.exists()){
+        int file_size = file_info.size();
+        if(parse_len > file_size)     //断点续载
+            m_startbit = file_size;
+    }
     m_total_len = recvJson["length"].asInt();   //文件长度
     m_fileid = recvJson["fileid"].asInt();      //文件id
 
@@ -1034,9 +1050,11 @@ void MainWindow::sendDataLogout()
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
+    m_pFolder->clearTree();
+
     clearUser();        //清空用户信息
     setNotLoginUI();    //设置未登录界面
-    m_pFolder->clearTree();
+    hideSubWin();
 
     QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_LOGOUT;

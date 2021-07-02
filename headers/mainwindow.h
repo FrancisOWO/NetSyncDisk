@@ -69,6 +69,8 @@ private:
     void InitConnections();
     void InitLogDir();
 
+    void hideSubWin();
+
     void InitSocket();
     void DestroySocket();
 
