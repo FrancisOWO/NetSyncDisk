@@ -5,6 +5,8 @@
 #include <QMessageBox>
 #include <QCryptographicHash>
 #include <QDebug>
+#include <fstream>
+using namespace std;
 
 QString Num2ByteNum(const int &num)
 {
@@ -87,24 +89,11 @@ QString getFileMD5(const QString &file_path)
 
 bool createDir(const QString &rel_path)
 {
-    //dir末尾有'/'
-    QStringList split_dir = rel_path.split('/');
-    int split_len = split_dir.length();
-    if(split_len < 1)
-        return false;
-    //递归创建文件夹
-    else {
-        int dir_cnt = split_dir.count();
-        QString temp_path;
-        for(int i = 0; i < dir_cnt; i++){
-            temp_path += split_dir[i] + "/";
-            QDir temp_dir(temp_path);
-            if(!temp_dir.exists()){
-                if(!temp_dir.mkdir(temp_path))
-                    return false;
-            }
-        }
-    }
+    QString str = rel_path;
+    QString str1 = "md \"" + str.replace("/", "\\") + "\"";
+    qDebug() << str1.toLocal8Bit();
+    system(str1.toLocal8Bit());
+
     return true;
 }
 
@@ -113,9 +102,19 @@ bool createFile(const QString &rel_path)
     //QString create_cmd = "md " + rel_path;
     //system(create_cmd.toStdString().c_str()); //注意路径中的'/'
     //return true;
+    int pos = rel_path.lastIndexOf('/');
+    QString str = rel_path.mid(0, pos);
+    QString str1 = "md \"" + str.replace("/", "\\") + "\"";
+    qDebug() << str1.toLocal8Bit();
+    system(str1.toLocal8Bit());
+    //创建文件
+    fstream fout(rel_path.toLocal8Bit(), ios::out | ios::binary);
+    fout.close();
 
+#if 0
     QStringList split_dir = rel_path.split('/');
     int split_len = split_dir.length();
+    qDebug() << "split len: "<< split_len <<" "<< rel_path;
     if(split_len < 1)
         return false;
     //递归创建文件夹
@@ -127,6 +126,7 @@ bool createFile(const QString &rel_path)
         QString temp_path;
         for(int i = 0; i < dir_cnt; i++){
             temp_path += split_dir[i] + "/";
+            qDebug() << "create dir" << temp_path;
             QDir temp_dir(temp_path);
             if(!temp_dir.exists()){
                 if(!temp_dir.mkdir(temp_path))
@@ -134,6 +134,8 @@ bool createFile(const QString &rel_path)
             }
         }
     }
+    qDebug() << "file_path:" << rel_path;
+#endif
     return true;
 }
 

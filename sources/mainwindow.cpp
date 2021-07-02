@@ -591,9 +591,10 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
         qDebug() <<"parse upfile clear!!!";
         clearUpfile();
 
+        /*
         if(m_filepath == m_pFolder->m_last_path){
             MyMessageBox::information("提示", "同步完成！");
-        }
+        }*/
 
         m_pFolder->SyncQDequeue();      //出队
         return;
@@ -646,9 +647,10 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
         qDebug() <<"parse upfileseg finish clear!!!";
         clearUpfile();
 
+        /*
         if(m_filepath == m_pFolder->m_last_path){
             MyMessageBox::information("提示", "同步完成！");
-        }
+        }*/
 
         m_pFolder->SyncQDequeue();      //处理完成，出队
         return;
@@ -1287,8 +1289,13 @@ void MainWindow::downfileSeg(const QByteArray &content_ba)
     //QMessageBox::information(nullptr, "path", file_path);
 
     //不存在则创建
-    if(!createFile(file_path)){
-        qDebug() << "Create "<< file_path << " ERROR";
+    int last_pos = file_path.lastIndexOf('/');
+    QString base_path = file_path.mid(0, last_pos);
+    if(base_path != m_pFolder->getRootDir()){
+        qDebug() <<"base path:" << base_path;
+        if(!createFile(file_path)){
+           qDebug() << "Create "<< file_path << " ERROR";
+        }
     }
 
     fstream fout(file_path.toLocal8Bit(), ios::in | ios::out | ios::binary);

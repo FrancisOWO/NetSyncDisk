@@ -246,8 +246,15 @@ void FormFolder::chooseRemoteFile()
     */
     ui->lnRemoteFilePath->setText(file_path);
 
-    //emit downfile(file_path);
-    SyncFileOrDir(file_path, SYNC_DOWNFILE);
+    int end_pos = file_path.length() - 1;
+    if(file_path[end_pos] == '/'){  //目录
+        file_path = m_root_dir + "/" + file_path;
+        createDir(file_path);
+    }
+    else {      //文件
+        //emit downfile(file_path);
+        SyncFileOrDir(file_path, SYNC_DOWNFILE);
+    }
 }
 
 void FormFolder::updateAutoUpdFlag()
@@ -358,7 +365,7 @@ void FormFolder::DownAll()
     int flist_len = m_file_list.length();
     //先建立目录，再下载文件
     for(int i = 0; i < dlist_len; i++){
-        QString dir_path = m_dir_list[i];
+        QString dir_path = m_root_dir + "/" + m_dir_list[i];
         createDir(dir_path);
     }
     for(int i = 0; i < flist_len; i++){
