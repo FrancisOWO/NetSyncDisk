@@ -70,6 +70,8 @@ private:
     void InitSocket();
     void DestroySocket();
 
+    int getRealpathLen(const QString &path);
+
     bool isConnected();
     bool isLoginUser();
     void setConnectStatus(int status);

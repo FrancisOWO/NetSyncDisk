@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>742</width>
-    <height>727</height>
+    <height>751</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,13 +19,13 @@
      <property name="minimumSize">
       <size>
        <width>600</width>
-       <height>70</height>
+       <height>80</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>70</height>
+       <height>80</height>
       </size>
      </property>
      <property name="font">
@@ -37,6 +37,54 @@
       <string>工具</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="4">
+       <widget class="QPushButton" name="pbtnUpdFolder">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>更新目录</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pbtnChoLocalDir">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>选择目录</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QCheckBox" name="chkAutoUpd">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>自动刷新</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
@@ -47,7 +95,7 @@
            </font>
           </property>
           <property name="text">
-           <string>顶层目录：</string>
+           <string>本地目录：</string>
           </property>
          </widget>
         </item>
@@ -74,8 +122,8 @@
         </item>
        </layout>
       </item>
-      <item row="0" column="1">
-       <widget class="QPushButton" name="pbtnChoLocalDir">
+      <item row="0" column="6">
+       <widget class="QPushButton" name="pbtnClearQ">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -88,7 +136,7 @@
          </font>
         </property>
         <property name="text">
-         <string>选择目录</string>
+         <string>清空队列</string>
         </property>
        </widget>
       </item>
@@ -122,54 +170,6 @@
          </size>
         </property>
        </spacer>
-      </item>
-      <item row="0" column="4">
-       <widget class="QPushButton" name="pbtnUpdFolder">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>30</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>刷新目录</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="5">
-       <widget class="QCheckBox" name="chkAutoUpd">
-        <property name="font">
-         <font>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>自动刷新</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="6">
-       <widget class="QPushButton" name="pbtnClearQ">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>30</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>10</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>清空队列</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>
@@ -353,19 +353,6 @@
        </widget>
       </item>
       <item row="0" column="2">
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>170</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="0" column="3">
        <widget class="QLineEdit" name="lnRemoteFilePath">
         <property name="minimumSize">
          <size>
@@ -386,7 +373,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="4">
+      <item row="0" column="3">
        <widget class="QPushButton" name="pbtnChoRemoteFile">
         <property name="minimumSize">
          <size>
@@ -401,6 +388,24 @@
         </property>
         <property name="text">
          <string>选中远程文件</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QPushButton" name="pbtnDownAll">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>下载全部</string>
         </property>
        </widget>
       </item>

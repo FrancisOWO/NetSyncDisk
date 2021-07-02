@@ -21,8 +21,10 @@
 
 #include <sstream>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <cstdlib>
+using namespace std;
 
 #include "tools.h"
 
@@ -199,6 +201,15 @@ void MainWindow::DestroySocket()
     delete  m_server_sock;
 }
 
+int MainWindow::getRealpathLen(const QString &path)
+{
+    int base_len = m_pFolder->getRootDir().length() + 1;
+    int len = path.length() - base_len - 4;   //减去".tmp"
+    if(len <= 0)
+        return 0;
+    return len;
+}
+
 //判断用户是否登录
 bool MainWindow::isLoginUser()
 {
@@ -251,6 +262,10 @@ void MainWindow::renameFileWithoutTmp()
     m_pFolder->m_temp_path = new_filepath;
     qDebug() <<"rename "<< m_filepath << " "<< new_filepath;
     if(!QFile::rename(m_filepath, new_filepath)){    //改名
+        QString log_str = CStr2LocalQStr("同名文件覆盖[userid:") + QString::number(m_userid) + "] ";
+        log_str += new_filepath;
+        WriteConnectLog(log_str);
+
         MyMessageBox::warning("警告", "存在冲突，覆盖同名文件！");
         QFile::remove(new_filepath);
         QFile::rename(m_filepath, new_filepath);
@@ -562,6 +577,8 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
     int status = recvJson["status"].asInt();
     if(0 == status){    //已同步，无需上传
         qDebug() << m_filepath << CStr2LocalQStr("已同步，无需上传！");
+        m_pFolder->WriteSyncLog("秒传");
+
         //MyMessageBox::information("提示", "已同步，无需上传！");
         int base_len = m_pFolder->getRootDir().length() + 1;
         QString upfile_str = m_filepath.mid(base_len) + CStr2LocalQStr(" *文件上传完成！");
@@ -679,7 +696,8 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
     m_total_len = recvJson["length"].asInt();   //文件长度
     m_fileid = recvJson["fileid"].asInt();      //文件id
 
-    QString downfile_str = m_filepath.mid(0, -5)
+    int realpath_len = getRealpathLen(m_filepath);
+    QString downfile_str = m_filepath.mid(0, realpath_len)
             + CStr2LocalQStr(" *文件下载中......");
     ui->lnStatus->setText(downfile_str);
     //绝对路径（加'/'）
@@ -734,7 +752,8 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
         QFileInfo file_info(m_filepath);
         int total_len = file_info.size();
         int base_len = m_pFolder->getRootDir().length() + 1;
-        QString status_str = m_filepath.mid(base_len, -5)
+        int realpath_len = getRealpathLen(m_filepath);
+        QString status_str = m_filepath.mid(base_len, realpath_len)
                 + CStr2LocalQStr(" *文件下载完成！");
         ui->lnStatus->setText(status_str);
         ui->progStatus->setValue(100);
@@ -742,13 +761,13 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
         ui->lnBytes->setText(prog_str);
 
         renameFileWithoutTmp();
-#if 1
+#if 0
         MyMessageBox::information("提示", "下载完成！");
 #endif
         qDebug() <<"parse downfileseg finish clear!!!";
         clearUpfile();
 
-        //m_pFolder->SyncQDequeue();      //处理完成，出队
+        m_pFolder->SyncQDequeue();      //处理完成，出队
         return;
     }
     //本段下载成功，下载下一段
@@ -818,21 +837,22 @@ void MainWindow::recvData()
     int cnt = 0;
     while(str_ba.length() - 2 < len){
         cnt++;
-        if(m_server_sock->waitForReadyRead()){
-            QByteArray read_ba = m_server_sock->readAll();
-            qDebug() << "one read len:" << read_ba.length();
-            str_ba += read_ba;
-        }
         if(cnt > 5){
             m_recv_status = STAT_ERROR;
             MyMessageBox::critical("错误", "接收数据失败！");
             return;
+        }
+        if(m_server_sock->waitForReadyRead()){
+            QByteArray read_ba = m_server_sock->readAll();
+            qDebug() << "one read len:" << read_ba.length();
+            str_ba += read_ba;
         }
     }
     //内容
     str_ba = str_ba.mid(2, len);
 
 #ifdef DEBUG_UPSEG
+    qDebug() << str_ba;
     qDebug() << "recv len: "<< len;
     qDebug() << "read : "<< str;
     qDebug() << "len : "<< str.length();
@@ -1256,39 +1276,6 @@ void MainWindow::sendDataDownfileseg(qint64 startbit, int file_id, int len)
     sendData(sendba);     //发送数据
 }
 
-bool createFile(const QString &rel_path)
-{
-    //QString create_cmd = "md " + rel_path;
-    //system(create_cmd.toStdString().c_str()); //注意斜杠
-    //return true;
-
-    QStringList split_dir = rel_path.split('/');
-    int split_len = split_dir.length();
-    if(split_len < 1)
-        return false;
-    //递归创建文件夹
-    else if(split_len > 1){
-        int dir_cnt = split_dir.count() - 1;
-        QString temp_path;
-        for(int i = 0; i < dir_cnt; i++){
-            temp_path += split_dir[i] + "/";
-            QDir temp_dir(temp_path);
-            if(!temp_dir.exists()){
-                if(!temp_dir.mkdir(temp_path))
-                    return false;
-            }
-        }
-    }
-    //创建文件
-    QFile file_creat(rel_path);
-    if(!file_creat.open(QFile::WriteOnly))
-        return false;
-    file_creat.close();
-
-    return true;
-}
-
-
 //下载文件片段
 void MainWindow::downfileSeg(const QByteArray &content_ba)
 {
@@ -1299,10 +1286,17 @@ void MainWindow::downfileSeg(const QByteArray &content_ba)
     qDebug() <<"down file seg......";
     //QMessageBox::information(nullptr, "path", file_path);
 
+    //不存在则创建
     if(!createFile(file_path)){
         qDebug() << "Create "<< file_path << " ERROR";
     }
 
+    fstream fout(file_path.toLocal8Bit(), ios::in | ios::out | ios::binary);
+    fout.seekp(start_bit);
+    fout.write(content_ba, len);
+    fout.close();
+
+#if 0
     QFile file_out(file_path);
     if(!file_out.open(QIODevice::ReadWrite)){
         qDebug() << CStr2LocalQStr("文件打开失败！") << file_path.toLocal8Bit();
@@ -1310,11 +1304,15 @@ void MainWindow::downfileSeg(const QByteArray &content_ba)
         return;
     }
     qDebug() <<"*****************************************"<< len;
-    qDebug() <<"filepath:" << m_filepath << " startbit:" << start_bit <<" len:"<< len;
+    qDebug() <<"filepath:" << m_filepath << " startbit:" << start_bit <<"ba len:"<< len;
 
-    file_out.seek(start_bit);    //移动文件指针
+    qDebug() <<"content ba";
+    qDebug() << content_ba;
+
+    file_out.seek(file_out.size());    //移动文件指针
     file_out.write(content_ba, len);    //写入文件
     file_out.close();        //关闭文件
+#endif
 }
 
 //分段下载文件

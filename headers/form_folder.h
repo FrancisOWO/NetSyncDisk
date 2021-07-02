@@ -29,10 +29,12 @@ public:
     QString getRootDir();
 
 public:
-    static const int SYNC_UPFILE = 0;
-    static const int SYNC_RMFILE = 1;
-    static const int SYNC_MKDIR = 2;
-    static const int SYNC_RMDIR = 3;
+    static const int SYNC_UPFILE    = 0;
+    static const int SYNC_RMFILE    = 1;
+    static const int SYNC_DOWNFILE  = 2;
+
+    static const int SYNC_MKDIR     = 3;
+    static const int SYNC_RMDIR     = 4;
 
     QString m_last_path;
     QString m_temp_path;
@@ -57,12 +59,16 @@ public slots:
     void InitFolderTree();
     void updateFolderTree();
 
+    void DownAll();
+
 private:
     Ui::FormFolder *ui;
     QString m_root_dir;
     bool m_autoUpd_flag;
-
     int m_userid;
+
+    QStringList m_dir_list;
+    QStringList m_file_list;
 
     QFileSystemWatcher *m_pFilesysWatcher;
 

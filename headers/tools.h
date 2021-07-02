@@ -17,6 +17,10 @@ QString QStr2MD5(const QString &str);
 
 QString getFileMD5(const QString &file_path);
 
+bool createDir(const QString &rel_path);
+
+bool createFile(const QString &rel_path);
+
 class MyMessageBox {
 public:
     static void information(const char *title, const char *info);

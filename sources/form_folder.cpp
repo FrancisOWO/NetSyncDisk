@@ -50,23 +50,25 @@ void FormFolder::InitMembers()
 
 void FormFolder::InitConnections()
 {
+    //选择目录
     connect(ui->pbtnChoLocalDir, SIGNAL(clicked()), this, SLOT(chooseRootDir()));
     connect(ui->pbtnBandLocalDir, SIGNAL(clicked()), this, SLOT(changeRootDir()));
     connect(ui->pbtnUpdFolder, SIGNAL(clicked()), this, SLOT(updateFolderTree()));
-
+    //选择文件
     connect(ui->pbtnChooseFile, SIGNAL(clicked()), this, SLOT(chooseFile()));
     connect(ui->pbtnChoRemoteFile, SIGNAL(clicked()), this, SLOT(chooseRemoteFile()));
-
+    //自动刷新
     connect(ui->chkAutoUpd, SIGNAL(clicked()), this, SLOT(updateAutoUpdFlag()));
-
+    //清空队列
     connect(ui->pbtnClearQ, SIGNAL(clicked()), this, SLOT(SyncQClear()));
+    //下载全部
+    connect(ui->pbtnDownAll, SIGNAL(clicked()), this, SLOT(DownAll()));
 
     //监视目录和文件
     connect(m_pFilesysWatcher, SIGNAL(fileChanged(const QString &)),
             this, SLOT(onFileChanged(const QString &)));
     connect(m_pFilesysWatcher, SIGNAL(directoryChanged(const QString &)),
             this, SLOT(onDirChanged(const QString &)));
-
 }
 
 void FormFolder::chooseRootDir()
@@ -244,7 +246,8 @@ void FormFolder::chooseRemoteFile()
     */
     ui->lnRemoteFilePath->setText(file_path);
 
-    emit downfile(file_path);
+    //emit downfile(file_path);
+    SyncFileOrDir(file_path, SYNC_DOWNFILE);
 }
 
 void FormFolder::updateAutoUpdFlag()
@@ -268,17 +271,17 @@ void FormFolder::InitRemoteTree(Json::Value recvJson)
     pRoot->setCheckState(1, Qt::Checked);
     qDebug() << m_root_dir;
 
+    m_dir_list.clear();
+    m_file_list.clear();
+
     qDebug() <<"--------------path";
     if(recvJson.isMember("path")){
         int path_size = recvJson["path"].size();
         for(int i = 0; i < path_size; i++){
             QString dir_path = QString::fromLocal8Bit(recvJson["path"][i].asString().c_str());
-            qDebug() << "l8bit:" << QString::fromLocal8Bit(recvJson["path"][i].asString().c_str());
-            qDebug() << "latin" << QString::fromLatin1(recvJson["path"][i].asString().c_str());
-            qDebug() << "utf8" << QString::fromUtf8(recvJson["path"][i].asString().c_str());
-            qDebug() << "cstr" <<  recvJson["path"][i].asString().c_str();
-            qDebug() << "data" <<  recvJson["path"][i].asString().data();
-            std::cout << "cout data" <<  recvJson["path"][i].asString().data();
+            qDebug() << dir_path;
+            m_dir_list << dir_path;
+
             QTreeWidgetItem *pChild = new QTreeWidgetItem(QStringList() << dir_path);
             pChild->setCheckState(1, Qt::Checked);
             pRoot->addChild(pChild);
@@ -290,6 +293,8 @@ void FormFolder::InitRemoteTree(Json::Value recvJson)
         for(int i = 0; i < file_size; i++){
             QString file_path = QString::fromLocal8Bit(recvJson["file"][i].asString().c_str());
             qDebug() << file_path;
+            m_file_list << file_path;
+
             QTreeWidgetItem *pChild = new QTreeWidgetItem(QStringList() << file_path);
             pChild->setCheckState(1, Qt::Checked);
             pRoot->addChild(pChild);
@@ -345,6 +350,23 @@ void FormFolder::updateFolderTree()
     ui->treeFolder->update();
 }
 
+//下载全部
+void FormFolder::DownAll()
+{
+    MyMessageBox::information("提示", "开始下载全部！");
+    int dlist_len = m_dir_list.length();
+    int flist_len = m_file_list.length();
+    //先建立目录，再下载文件
+    for(int i = 0; i < dlist_len; i++){
+        QString dir_path = m_dir_list[i];
+        createDir(dir_path);
+    }
+    for(int i = 0; i < flist_len; i++){
+        QString file_path = m_file_list[i];
+        SyncFileOrDir(file_path, SYNC_DOWNFILE);
+    }
+}
+
 //清空队列
 void FormFolder::SyncQClear()
 {
@@ -377,6 +399,9 @@ QString FormFolder::getModeStr(int mode)
     }
     else if(mode == SYNC_RMFILE){
         mode_str = "rmfile";
+    }
+    else if(mode == SYNC_DOWNFILE){
+        mode_str = "downfile";
     }
     return mode_str;
 }
@@ -456,7 +481,7 @@ void FormFolder::ProcessSync()
     QString out_str = temp_sync.path + " : " + mode_str + " START";
     WriteSyncLog(out_str.toLocal8Bit());
 
-    if(t_mode == SYNC_UPFILE || t_mode == SYNC_RMFILE){
+    if(t_mode == SYNC_UPFILE || t_mode == SYNC_RMFILE || t_mode == SYNC_DOWNFILE){
         SyncFile(t_path, t_mode);
     }
     else if(t_mode == SYNC_MKDIR || t_mode == SYNC_RMDIR){
@@ -493,15 +518,23 @@ void FormFolder::SyncFile(const QString &file_path, int mode)
         return;
     }
     //上传文件
-    QFileInfo file_info(file_path);
-    if(file_info.size() == 0){
-        qDebug() << CStr2LocalQStr("空文件不上传！");
-        SyncQDequeue();
-        return;
+    else if(mode == SYNC_UPFILE) {
+        QFileInfo file_info(file_path);
+        if(file_info.size() == 0){
+            qDebug() << CStr2LocalQStr("空文件不上传！");
+            QString out_str = CStr2LocalQStr("0字节文件无需上传");
+            WriteSyncLog(out_str.toLocal8Bit());
+            SyncQDequeue();
+            return;
+        }
+        qDebug() << "full path:" << file_path <<", file_path: "<< rel_path;
+        emit upfile(rel_path);
     }
-    qDebug() << "full path:" << file_path <<", file_path: "<< rel_path;
-
-    emit upfile(rel_path);
+    //下载文件
+    else if(mode == SYNC_DOWNFILE){
+        //path为远程路径
+        emit downfile(file_path);
+    }
 }
 
 //同步目录
