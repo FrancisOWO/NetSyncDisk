@@ -55,6 +55,8 @@ void MainWindow::InitMembers()
 {
     m_recv_status = 0;
 
+    InitLogDir();   //创建日志目录
+
     setConnectStatus(CONN_NO);
     clearUser();    //清空用户信息
     clearUpfile();
@@ -189,6 +191,20 @@ void MainWindow::clearUpfile()
     m_filepath.clear();
 }
 
+void MainWindow::InitLogDir()
+{
+    QStringList dir_list = {"userinfo", "log"};
+    for(int i = 0; i < dir_list.length(); i++){
+        //QString path = dir_list[i];
+        //createDir(path);
+        QDir temp_dir(dir_list[i]);
+        QString path = temp_dir.absolutePath();
+        qDebug() <<"abs path: "<< path;
+        createDir(path);
+    }
+    return;
+}
+
 void MainWindow::InitSocket()
 {
     m_server_sock = new QTcpSocket(this);
@@ -199,6 +215,16 @@ void MainWindow::DestroySocket()
 {
     m_server_sock->close();
     delete  m_server_sock;
+}
+
+QString MainWindow::getUrecPath()
+{
+    return "userinfo/" + QString::number(m_userid) + ".connect.rec";
+}
+
+QString MainWindow::getConnLogPath()
+{
+    return "log/connect.log";
 }
 
 int MainWindow::getRealpathLen(const QString &path)
@@ -286,7 +312,7 @@ void MainWindow::WriteConnectLog(const char *str)
 
 void MainWindow::WriteConnectLog(const QString &str)
 {
-    QString filename = "connect.log";
+    QString filename = getConnLogPath();
     QFile qfout(filename);
     if(!qfout.open(QFile::ReadWrite)){
         MyMessageBox::critical("错误","connect文件打开失败！");
@@ -305,7 +331,7 @@ void MainWindow::WriteConnectLog(const QString &str)
 
 void MainWindow::WriteConnectRec(const QString &local_dir, const QString &remote_dir)
 {
-    QString file_path = QString::number(m_userid) + ".connect.rec";
+    QString file_path = getUrecPath();
     QFile file_out(file_path);
     if(!file_out.open(QFile::WriteOnly)){
         QString str = CStr2LocalQStr("绑定文件打开失败[userid:") + QString::number(m_userid) + "]";
@@ -891,16 +917,16 @@ void MainWindow::openLoginPage()
 //打开目录页面
 void MainWindow::openFolderPage()
 {
-    //if(!isLoginUser())
-    //    return;
+    if(!isLoginUser())
+        return;
 
     //从绑定记录文件获取路径
-    QString file_path = QString::number(m_userid) + ".connect.rec";
+    QString file_path = getUrecPath();
     QFile file_in(file_path);
     if(!file_in.open(QFile::ReadOnly)){
         qDebug() << "绑定记录不存在！";
         file_in.open(QFile::WriteOnly);     //创建文件
-        QString default_rec = "*None|*None";
+        QString default_rec = "|";          //local|remote
         file_in.write(default_rec.toLocal8Bit(), default_rec.length());
         file_in.close();
 
@@ -925,10 +951,13 @@ void MainWindow::openFolderPage()
         write_str += local_dir + "|" + remote_dir;
         WriteConnectLog(write_str);
 
-        if(!local_dir.contains("*") && local_dir != ""){
+        if(local_dir != ""){
+            m_pFolder->setBandStatus(true);
             m_pFolder->setLocalDir(local_dir);
             m_pFolder->InitFolderTree();        //更新同步目录
         }
+        else
+            m_pFolder->setBandStatus(false);
     }
 
     m_pFolder->setUserid(m_userid);
@@ -1007,6 +1036,7 @@ void MainWindow::sendDataLogout()
 
     clearUser();        //清空用户信息
     setNotLoginUI();    //设置未登录界面
+    m_pFolder->clearTree();
 
     QByteArray sendba = QStr2LocalBa(sendbuf);
     m_recv_status = STAT_LOGOUT;

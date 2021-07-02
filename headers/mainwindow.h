@@ -67,9 +67,13 @@ private:
 private:
     void InitMembers();
     void InitConnections();
+    void InitLogDir();
+
     void InitSocket();
     void DestroySocket();
 
+    QString getConnLogPath();
+    QString getUrecPath();
     int getRealpathLen(const QString &path);
 
     bool isConnected();

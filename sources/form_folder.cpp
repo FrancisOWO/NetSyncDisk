@@ -40,6 +40,7 @@ void FormFolder::InitMembers()
     m_pFilesysWatcher = new QFileSystemWatcher();
     m_enq_enable = 1;
     m_autoUpd_flag = 0;
+    m_is_banded = 0;
 
     resetUserid();  //清userid
 
@@ -52,7 +53,7 @@ void FormFolder::InitConnections()
 {
     //选择目录
     connect(ui->pbtnChoLocalDir, SIGNAL(clicked()), this, SLOT(chooseRootDir()));
-    connect(ui->pbtnBandLocalDir, SIGNAL(clicked()), this, SLOT(changeRootDir()));
+    connect(ui->pbtnBandLocalDir, SIGNAL(clicked()), this, SLOT(bandRootDir()));
     connect(ui->pbtnUpdFolder, SIGNAL(clicked()), this, SLOT(updateFolderTree()));
     //选择文件
     connect(ui->pbtnChooseFile, SIGNAL(clicked()), this, SLOT(chooseFile()));
@@ -78,8 +79,15 @@ void FormFolder::chooseRootDir()
     ui->lnRootDir->setText(path);
 }
 
-void FormFolder::changeRootDir()
+void FormFolder::bandRootDir()
 {
+    QString band_str;
+    if(m_is_banded){    //已绑定，点击，解除绑定
+        unBand();
+        setBandStatus(false);
+        return;
+    }
+
     QString path = ui->lnRootDir->text();
     if(path.length() == 0){
         QString title = CStr2LocalQStr("错误");
@@ -110,6 +118,8 @@ void FormFolder::changeRootDir()
     }
     //目录存在
     else {
+        setBandStatus(true);
+
         QString title = CStr2LocalQStr("提示");
         QString info = path + CStr2LocalQStr("目录绑定成功！");
         QMessageBox::information(nullptr, title, info);
@@ -382,6 +392,66 @@ void FormFolder::SyncQClear()
     m_enq_enable = 1;
 }
 
+//解除绑定
+void FormFolder::unBand()
+{
+    //取消监视
+    QStringList file_list = m_pFilesysWatcher->files();
+    QStringList dir_list = m_pFilesysWatcher->directories();
+    for(int i = 0; i < file_list.length(); i++){
+        m_pFilesysWatcher->removePath(file_list[i]);
+    }
+    for(int i = 0; i < dir_list.length(); i++){
+        m_pFilesysWatcher->removePath(dir_list[i]);
+    }
+    //清空队列
+    SyncQClear();
+    m_file_list.clear();
+    m_dir_list.clear();
+    m_root_dir = "";
+    ui->treeFolder->clear();
+    //清空绑定记录
+    emit banded("","");
+
+    return;
+}
+
+//用户退出时，清空目录
+void FormFolder::clearTree()
+{    //取消监视
+    QStringList file_list = m_pFilesysWatcher->files();
+    QStringList dir_list = m_pFilesysWatcher->directories();
+    for(int i = 0; i < file_list.length(); i++){
+        m_pFilesysWatcher->removePath(file_list[i]);
+    }
+    for(int i = 0; i < dir_list.length(); i++){
+        m_pFilesysWatcher->removePath(dir_list[i]);
+    }
+    //清空队列
+    SyncQClear();
+    m_file_list.clear();
+    m_dir_list.clear();
+    m_root_dir = "";
+
+    ui->treeFolder->clear();
+    ui->treeRemote->clear();
+
+    return;
+}
+
+void FormFolder::setBandStatus(bool status)
+{
+    QString band_str;
+    m_is_banded = status;
+
+    //绑定成功，按钮变为解绑
+    if(m_is_banded)
+        band_str = CStr2LocalQStr("解除绑定");
+    else
+        band_str = CStr2LocalQStr("绑定目录");
+    ui->pbtnBandLocalDir->setText(band_str);
+}
+
 void FormFolder::setUserid(int userid)
 {
     m_userid = userid;
@@ -413,12 +483,17 @@ QString FormFolder::getModeStr(int mode)
     return mode_str;
 }
 
+QString FormFolder::getSyncLogPath()
+{
+    return "userinfo/" + QString::number(m_userid) + ".sync.log";
+}
+
 void FormFolder::WriteSyncLog(const QByteArray &out_ba)
 {
-    QString filename = QString::number(m_userid) + ".sync.log";
+    QString filename = getSyncLogPath();
+    return;
     QFile qfout(filename);
     if(!qfout.open(QFile::ReadWrite)){
-        return;
     }
     QString time_str = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
     QByteArray write_ba = "[" + time_str.toLocal8Bit() + "]";

@@ -40,9 +40,15 @@ public:
     QString m_temp_path;
 
 public:
+    void unBand();      //取消绑定
+
+    void clearTree();   //用户退出时，清空目录
+
+    void setBandStatus(bool status);
     void setUserid(int userid);
     void resetUserid();
 
+    QString getSyncLogPath();
     void WriteSyncLog(const QByteArray &out_ba);
 
     QString getModeStr(int mode);
@@ -74,6 +80,7 @@ private:
 
     QQueue<StructSync> m_sync_q;
     bool m_enq_enable;
+    bool m_is_banded;
 
 private:
     void InitMembers();
@@ -91,7 +98,7 @@ private:
 private slots:
 
     void chooseRootDir();
-    void changeRootDir();
+    void bandRootDir();
 
     void onFileChanged(const QString &path);
     void onDirChanged(const QString &path);

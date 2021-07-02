@@ -89,30 +89,51 @@ QString getFileMD5(const QString &file_path)
 
 bool createDir(const QString &rel_path)
 {
+#if 0
     QString str = rel_path;
     QString str1 = "md \"" + str.replace("/", "\\") + "\"";
     qDebug() << str1.toLocal8Bit();
     system(str1.toLocal8Bit());
+#else
+    QString path_copy = rel_path;
+    int end_pos = rel_path.length() - 1;
+    if(rel_path[end_pos] == '/')
+        path_copy = rel_path.mid(0, end_pos);
 
+    QStringList split_dir = path_copy.split('/');
+    int split_len = split_dir.length();
+    qDebug() << "split len: "<< split_len <<" "<< path_copy;
+    if(split_len < 1)
+        return false;
+    //递归创建文件夹
+    else {
+        int dir_cnt = split_dir.count();
+        QString temp_path;
+        for(int i = 0; i < dir_cnt; i++){
+            temp_path += split_dir[i] + "/";
+            qDebug() << "create dir" << temp_path;
+            QDir temp_dir(temp_path);
+            if(!temp_dir.exists()){
+                if(!temp_dir.mkdir(temp_path))
+                    return false;
+            }
+        }
+    }
+#endif
     return true;
 }
 
 bool createFile(const QString &rel_path)
 {
-    //QString create_cmd = "md " + rel_path;
-    //system(create_cmd.toStdString().c_str()); //注意路径中的'/'
-    //return true;
+#if 0
     int pos = rel_path.lastIndexOf('/');
     QString dir_path = rel_path.mid(0, pos);
     //目录不存在，则创建目录
     QString cmd_str = "md \"" + dir_path.replace("/", "\\") + "\"";
     qDebug() << cmd_str.toLocal8Bit();
     system(cmd_str.toLocal8Bit());
-    //涉及到并行的问题，此处需创建文件
-    fstream fout(rel_path.toLocal8Bit(), ios::out | ios::binary);
-    fout.close();
 
-#if 0
+#else
     QStringList split_dir = rel_path.split('/');
     int split_len = split_dir.length();
     qDebug() << "split len: "<< split_len <<" "<< rel_path;
@@ -120,9 +141,6 @@ bool createFile(const QString &rel_path)
         return false;
     //递归创建文件夹
     else if(split_len > 1){
-        //int dir_len = rel_path.length() - split_dir.last().length();
-        //QString dir_path = rel_path.mid(0, dir_len);
-        //creatDir
         int dir_cnt = split_dir.count() - 1;
         QString temp_path;
         for(int i = 0; i < dir_cnt; i++){
@@ -137,6 +155,10 @@ bool createFile(const QString &rel_path)
     }
     qDebug() << "file_path:" << rel_path;
 #endif
+    //涉及到并行的问题，此处需创建文件
+    fstream fout(rel_path.toLocal8Bit(), ios::out | ios::binary);
+    fout.close();
+
     return true;
 }
 
