@@ -245,6 +245,8 @@ void MainWindow::setLoginUI()
     ui->pbtnLogin->setVisible(false);
     ui->pbtnRegister->setVisible(false);
     ui->pbtnLogout->setVisible(true);
+    ui->pbtnFolder->setVisible(true);
+    ui->pbtnAskPath->setVisible(true);
 }
 
 void MainWindow::setNotLoginUI()
@@ -252,6 +254,8 @@ void MainWindow::setNotLoginUI()
     ui->pbtnLogin->setVisible(true);
     ui->pbtnRegister->setVisible(true);
     ui->pbtnLogout->setVisible(false);
+    ui->pbtnFolder->setVisible(false);
+    ui->pbtnAskPath->setVisible(false);
 }
 
 void MainWindow::renameFileWithoutTmp()
@@ -676,6 +680,7 @@ void MainWindow::parseJsonAskAllPath(const Json::Value &recvJson)
 
     QString status_str = CStr2LocalQStr("目录获取完成！");
     ui->lnStatus->setText(status_str);
+    ui->lnBytes->setText("");
 
     m_pFolder->InitRemoteTree(recvJson);
 }
@@ -1291,13 +1296,13 @@ void MainWindow::downfileSeg(const QByteArray &content_ba)
     //不存在则创建
     int last_pos = file_path.lastIndexOf('/');
     QString base_path = file_path.mid(0, last_pos);
-    if(base_path != m_pFolder->getRootDir()){
+    QDir base_dir(base_path);
+    if(!base_dir.exists()) {
         qDebug() <<"base path:" << base_path;
         if(!createFile(file_path)){
            qDebug() << "Create "<< file_path << " ERROR";
         }
     }
-
     fstream fout(file_path.toLocal8Bit(), ios::in | ios::out | ios::binary);
     fout.seekp(start_bit);
     fout.write(content_ba, len);

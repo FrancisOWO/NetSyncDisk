@@ -103,11 +103,12 @@ bool createFile(const QString &rel_path)
     //system(create_cmd.toStdString().c_str()); //注意路径中的'/'
     //return true;
     int pos = rel_path.lastIndexOf('/');
-    QString str = rel_path.mid(0, pos);
-    QString str1 = "md \"" + str.replace("/", "\\") + "\"";
-    qDebug() << str1.toLocal8Bit();
-    system(str1.toLocal8Bit());
-    //创建文件
+    QString dir_path = rel_path.mid(0, pos);
+    //目录不存在，则创建目录
+    QString cmd_str = "md \"" + dir_path.replace("/", "\\") + "\"";
+    qDebug() << cmd_str.toLocal8Bit();
+    system(cmd_str.toLocal8Bit());
+    //涉及到并行的问题，此处需创建文件
     fstream fout(rel_path.toLocal8Bit(), ios::out | ios::binary);
     fout.close();
 

@@ -501,7 +501,9 @@ void FormFolder::SyncFileOrDir(const QString &path, int mode)
 {
     if(path.length() == 0)
         return;
-    if(path[0] == "~" || path[0] == "." || path.endsWith(".tmp"))
+    int last_pos = path.lastIndexOf('/') + 1;
+    QString last_path = path.mid(last_pos);
+    if(last_path[0] == "~" || last_path[0] == "." || path.endsWith(".tmp"))
         return;     //忽略临时文件
 
     //入队
