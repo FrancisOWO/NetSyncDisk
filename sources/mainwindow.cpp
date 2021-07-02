@@ -1,17 +1,23 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QTime>
-
 #include <QString>
+#include <QStringList>
+#include <QByteArray>
+
+#include <QDateTime>
+#include <QTime>
+#include <QAbstractSocket>
+
 #include <QSpinBox>
 #include <QMessageBox>
-#include <QAbstractSocket>
-#include <QByteArray>
-#include <QTextCodec>
-#include <QDebug>
+
 #include <QFile>
 #include <QFileInfo>
+#include <QTextCodec>
+
+#include <QDebug>
+
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -35,19 +41,22 @@ MainWindow::~MainWindow()
 
     delete m_pRegister;
     delete m_pLogin;
+    delete m_pFolder;
 
-    delete this->m_server_sock;
+    disconnectServer();
+    DestroySocket();
 }
 
 void MainWindow::InitMembers()
 {
-    m_is_connected = 0;
     m_recv_status = 0;
 
-    clearUserid();
-    clearUsername();
+    setConnectStatus(CONN_NO);
+    clearUser();    //清空用户信息
     clearUpfile();
-    setConStatus(CONN_NO);
+
+
+    setNotLoginUI();    //设置未登录界面
 
     m_pRegister = new FormRegister;
     m_pLogin = new FormLogin;
@@ -58,24 +67,26 @@ void MainWindow::InitMembers()
     //ui->spinIP3->setValue(43);
     //ui->spinIP4->setValue(230);
     ui->progStatus->setValue(0);
-
+    //IP
     ui->spinIP1->setValue(10);
     ui->spinIP2->setValue(60);
     ui->spinIP3->setValue(102);
     ui->spinIP4->setValue(252);
-
+    //端口
     ui->spinPort->setValue(20230);
 
     InitSocket();
 
-    //自动连接服务器
-    connectServer();
+    //自动连接服务器（登录后再连接）
+    //connectServer();
 }
 
 void MainWindow::InitConnections()
 {
+    //Socket连接
     connect(ui->pbtnConnect, SIGNAL(clicked()), this, SLOT(connectServer()));
     connect(ui->pbtnDisconnect, SIGNAL(clicked()), this, SLOT(disconnectServer()));
+
     connect(ui->pbtnSend, SIGNAL(clicked()), this, SLOT(sendDataFromBox()));
     connect(ui->pbtnRecv, SIGNAL(clicked()), this, SLOT(recvDataFromBox()));
 
@@ -94,6 +105,10 @@ void MainWindow::InitConnections()
     //请求目录
     connect(ui->pbtnAskPath, SIGNAL(clicked()), this, SLOT(sendDataAskAllPath()));
 
+    //绑定目录
+    connect(m_pFolder, SIGNAL(banded(const QString &, const QString &)),
+            this, SLOT(WriteBandLog(const QString &, const QString &)));
+
     //上传文件
     connect(m_pFolder, SIGNAL(upfile(const QString &)), this, SLOT(sendDataUpfile(const QString &)));
     //删除文件
@@ -107,27 +122,37 @@ void MainWindow::InitConnections()
     //下载文件
     connect(m_pFolder, SIGNAL(downfile(const QString &)), this, SLOT(sendDataDownfile(const QString &)));
 
-
-    connect(m_server_sock, &QTcpSocket::connected, [=](){
-        MyMessageBox::information("提示", "连接成功！");
-        m_is_connected = 1;
-    });
-    connect(m_server_sock, &QTcpSocket::readyRead, [=](){
 #if 0
-        MyMessageBox::information("提示", "可以读取数据！");
+    connect(m_server_sock, &QTcpSocket::connected, [=](){
+        WriteConnectLog("连接成功");
+        //MyMessageBox::information("提示", "连接成功！");
+        setConnectStatus(CONN_OK);
+    });
 #endif
+    connect(m_server_sock, &QTcpSocket::readyRead, [=](){
+        //MyMessageBox::information("提示", "可以读取数据！");
         recvData();     //接收数据
     });
     typedef void (QAbstractSocket::*QAbstractSocketErrorSignal)(QAbstractSocket::SocketError);
     connect(m_server_sock, static_cast<QAbstractSocketErrorSignal>(&QTcpSocket::error), [=](){
-        if(1 == m_is_connected)
-            MyMessageBox::information("提示", "连接断开！");
-        else
-            MyMessageBox::critical("错误", "连接失败！");
-        m_is_connected = 0;
-        clearUserid();
-        clearUsername();
+        if(1 == m_is_connected){
+            WriteConnectLog("连接断开");
+            qDebug() << CStr2LocalQStr("连接断开！");
+            //MyMessageBox::critical("错误", "连接断开！");
+        }
+        else {
+            WriteConnectLog("连接失败");
+            qDebug() << CStr2LocalQStr("连接失败！");
+            //MyMessageBox::critical("错误", "连接失败！");
+        }
+        setConnectStatus(CONN_NO);
+        clearUser();
     });
+}
+
+bool MainWindow::isConnected()
+{
+    return m_is_connected;
 }
 
 void MainWindow::setUsername()
@@ -146,6 +171,12 @@ void MainWindow::clearUserid()
     m_userid = -1;
 }
 
+void MainWindow::clearUser()
+{
+    clearUserid();
+    clearUsername();
+}
+
 void MainWindow::clearUpfile()
 {
     m_fileid = -1;
@@ -161,6 +192,12 @@ void MainWindow::InitSocket()
     m_server_sock->setReadBufferSize(65536);
 }
 
+void MainWindow::DestroySocket()
+{
+    m_server_sock->close();
+    delete  m_server_sock;
+}
+
 //判断用户是否登录
 bool MainWindow::isLoginUser()
 {
@@ -173,23 +210,96 @@ bool MainWindow::isLoginUser()
     return is_login;
 }
 
-void MainWindow::setConStatus(int status)
+void MainWindow::setConnectStatus(int status)
 {
     QString str;
     if(status == CONN_NO){
         str = CStr2LocalQStr("未连接");
+        m_is_connected = 0;
     }
     else if(status == CONN_ING){
         str = CStr2LocalQStr("连接中......");
+        m_is_connected = 0;
     }
     else if(status == CONN_OK){
         str = CStr2LocalQStr("已连接");
+        m_is_connected = 1;
     }
     ui->lnConStatus->setText(str);
 }
 
+void MainWindow::setLoginUI()
+{
+    ui->pbtnLogin->setVisible(false);
+    ui->pbtnRegister->setVisible(false);
+    ui->pbtnLogout->setVisible(true);
+}
+
+void MainWindow::setNotLoginUI()
+{
+    ui->pbtnLogin->setVisible(true);
+    ui->pbtnRegister->setVisible(true);
+    ui->pbtnLogout->setVisible(false);
+}
+
+void MainWindow::WriteConnectLog(const char *str)
+{
+    WriteConnectLog(CStr2LocalQStr(str));
+}
+
+void MainWindow::WriteConnectLog(const QString &str)
+{
+    QString filename = "connect.log";
+    QFile qfout(filename);
+    if(!qfout.open(QFile::ReadWrite)){
+        MyMessageBox::critical("错误","connect文件打开失败！");
+        return;
+    }
+    //加时间戳
+    QString time_str = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+    QByteArray write_ba = "[" + time_str.toLocal8Bit() + "]";
+    write_ba += str.toLocal8Bit();
+    write_ba += "\n";
+
+    qfout.seek(qfout.size());
+    qfout.write(write_ba, write_ba.length());
+    qfout.close();
+}
+
+void MainWindow::WriteConnectRec(const QString &local_dir, const QString &remote_dir)
+{
+    QString file_path = QString::number(m_userid) + ".connect.rec";
+    QFile file_out(file_path);
+    if(!file_out.open(QFile::WriteOnly)){
+        QString str = CStr2LocalQStr("绑定文件打开失败[userid:") + QString::number(m_userid) + "]";
+        WriteConnectLog(str);
+        return;
+    }
+    QString band_rec = local_dir + "|" + remote_dir;
+    QByteArray band_ba = band_rec.toLocal8Bit();
+    band_ba += "\n";
+    file_out.write(band_ba, band_ba.length());
+    file_out.close();
+    return;
+}
+
+//绑定目录
+void MainWindow::WriteBandLog(const QString &local_dir, const QString &remote_dir)
+{
+    QString write_str = CStr2LocalQStr("设置绑定目录[userid:") + QString::number(m_userid) + "] ";
+    QString band_rec = local_dir + "|" + remote_dir;
+    write_str += band_rec;
+    WriteConnectLog(write_str);
+    WriteConnectRec(local_dir, remote_dir);
+}
+
 void MainWindow::connectServer()
 {
+    //已连接
+    if(isConnected())
+        return;
+
+    //获取ip
     int ip_n = 4;
     QSpinBox *pSpinIP[4] = {ui->spinIP1, ui->spinIP2, ui->spinIP3, ui->spinIP4};
     QString ipaddr;
@@ -198,18 +308,22 @@ void MainWindow::connectServer()
         if(i < ip_n - 1)
             ipaddr += ".";
     }
+    //获取port
     int port = ui->spinPort->value();
+
     qDebug() <<"ip: "<< ipaddr;
     qDebug() <<"port: "<< port;
 
     m_server_sock->connectToHost(ipaddr, port);
-    setConStatus(CONN_ING);
+    setConnectStatus(CONN_ING);     //连接中
     if(m_server_sock->waitForConnected()){
-        setConStatus(CONN_OK);
+        setConnectStatus(CONN_OK);  //已连接
+        WriteConnectLog("连接成功");
         //MyMessageBox::information("提示", "连接成功！");
     }
     else {
-        setConStatus(CONN_NO);
+        setConnectStatus(CONN_NO);  //连接失败
+        WriteConnectLog("连接失败");
         //MyMessageBox::critical("错误", "连接失败！");
     }
 
@@ -217,10 +331,12 @@ void MainWindow::connectServer()
 
 void MainWindow::disconnectServer()
 {
-    m_server_sock->disconnect();
+    m_server_sock->disconnectFromHost();
     //m_server_sock->close();
-    MyMessageBox::information("提示", "断开连接！");
-    ui->lnConStatus->setText(CStr2LocalQStr("未连接"));
+    qDebug() << CStr2LocalQStr("断开连接！");
+    WriteConnectLog("断开连接");
+    //MyMessageBox::information("提示", "断开连接！");
+    setConnectStatus(CONN_NO);      //未连接
 }
 
 //发送文件数据
@@ -300,6 +416,11 @@ void MainWindow::sendData(const QByteArray &content_ba)
     str_ba += content_ba;
     //qDebug() << str;
     m_server_sock->write(str_ba);
+
+    //登出，断开连接
+    if(m_recv_status == STAT_LOGOUT){
+        disconnectServer();
+    }
 }
 
 //发送数据(QString)
@@ -391,10 +512,11 @@ void MainWindow::parseJsonLogin(const Json::Value &recvJson)
     qDebug() << "userid:" << recvJson["userid"].asInt();
 
     int status = recvJson["status"].asInt();
-    if(1 == status){
-        MyMessageBox::information("提示", "登录成功！");
+    if(1 == status){    //登录成功
         m_userid = recvJson["userid"].asInt();
         setUsername();
+        setLoginUI();   //设置登录界面
+        MyMessageBox::information("提示", "登录成功！");
 
         //清空请求队列
         m_pFolder->SyncQClear();
@@ -405,8 +527,7 @@ void MainWindow::parseJsonLogin(const Json::Value &recvJson)
         else {
             MyMessageBox::critical("错误", "登录失败！密码错误！");
         }
-        clearUserid();
-        clearUsername();
+        clearUser();
     }
     m_recv_status = STAT_WAIT;    //清标志位
 }
@@ -696,25 +817,63 @@ void MainWindow::recvData()
 //打开注册页面
 void MainWindow::openRegisterPage()
 {
+    connectServer();    //连接服务器
     m_pRegister->show();
 }
 
 //打开登录页面
 void MainWindow::openLoginPage()
 {
+    connectServer();    //连接服务器
     m_pLogin->show();
 }
 
 //打开目录页面
 void MainWindow::openFolderPage()
 {
-    if(!isLoginUser())
-        return;
+    //if(!isLoginUser())
+    //    return;
 
-    QString root_dir = "E:/test";
-    m_pFolder->setRootDir(root_dir);
-    m_pFolder->InitFolderTree();
+    //从绑定记录文件获取路径
+    QString file_path = QString::number(m_userid) + ".connect.rec";
+    QFile file_in(file_path);
+    if(!file_in.open(QFile::ReadOnly)){
+        qDebug() << "绑定记录不存在！";
+        file_in.open(QFile::WriteOnly);     //创建文件
+        QString default_rec = "*None|*None";
+        file_in.write(default_rec.toLocal8Bit(), default_rec.length());
+        file_in.close();
+
+        QString write_str = CStr2LocalQStr("创建绑定记录[userid:") + QString::number(m_userid) + "] " ;
+        write_str += default_rec;
+        WriteConnectLog(write_str);
+    }
+    else {
+        QByteArray conn_ba = file_in.readLine();
+        QString conn_str = QString::fromLocal8Bit(conn_ba);
+        /****************************
+         本地目录|网盘同步目录
+         ****************************/
+        QStringList split_dir = conn_str.split('|');
+        QString local_dir, remote_dir;
+        if(split_dir.length() == 2){
+            local_dir = split_dir[0];
+            remote_dir = split_dir[1];
+        }
+        QString write_str;
+        write_str += CStr2LocalQStr("读取绑定记录[userid:") + QString::number(m_userid) + "] " ;
+        write_str += local_dir + "|" + remote_dir;
+        WriteConnectLog(write_str);
+
+        if(!local_dir.contains("*") && local_dir != ""){
+            m_pFolder->setLocalDir(local_dir);
+            m_pFolder->InitFolderTree();        //更新同步目录
+        }
+    }
+
+    m_pFolder->setUserid(m_userid);
     m_pFolder->show();
+    return;
 }
 
 //注册
@@ -771,10 +930,11 @@ void MainWindow::sendDataLogin()
 //退出登录
 void MainWindow::sendDataLogout()
 {
+    qDebug() <<"logout...";
     //用户未登录
     if(!isLoginUser())
         return;
-    qDebug() <<"logout...";
+
     qDebug() <<"username: "<< m_username;
     qDebug() <<"userid: "<< m_userid;
 
@@ -785,10 +945,11 @@ void MainWindow::sendDataLogout()
     QString sendbuf = sendJson.toStyledString().data();
     ui->txtSend->setText(sendbuf);
 
-    clearUserid();    //置非法id
+    clearUser();        //清空用户信息
+    setNotLoginUI();    //设置未登录界面
 
     QByteArray sendba = QStr2LocalBa(sendbuf);
-    m_recv_status = STAT_WAIT;
+    m_recv_status = STAT_LOGOUT;
     sendData(sendba);     //发送数据
 }
 
@@ -849,10 +1010,10 @@ void MainWindow::upfileBySeg()
 void MainWindow::sendDataUpfile(const QString &file_path)
 {
     qDebug() << "sendDataUpfile" << file_path;
-
     //用户未登录
     if(!isLoginUser())
         return;
+
     QString full_path = m_pFolder->getRootDir() + "/" + file_path;
     m_filepath = full_path;
     //QMessageBox::information(nullptr, "info", full_path);
@@ -893,9 +1054,11 @@ void MainWindow::sendDataUpfile(const QString &file_path)
 //发送文件片段
 void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, int len)
 {
+    qDebug() << "upfileseg";
     //用户未登录
     if(!isLoginUser())
         return;
+
     QFile file_in(file_path);
     if(!file_in.open(QIODevice::ReadOnly)){
         qDebug() << CStr2LocalQStr("文件打开失败！");
@@ -989,10 +1152,10 @@ void MainWindow::sendDataAskAllPath()
     "function": "askallpath"
      *******************************/
     qDebug() << "askallpath";
-
     //用户未登录
     if(!isLoginUser())
         return;
+
     Json::Value sendJson;
     sendJson["function"] = "askallpath";
 
@@ -1013,10 +1176,10 @@ void MainWindow::sendDataDownfile(const QString &file_path)
     "path": "1/2/test.txt"
      *******************************/
     qDebug() << "downfile";
-
     //用户未登录
     if(!isLoginUser())
         return;
+
     Json::Value sendJson;
     sendJson["function"] = "downfile";
     sendJson["path"] = file_path.toStdString();
@@ -1033,7 +1196,7 @@ void MainWindow::sendDataDownfile(const QString &file_path)
 }
 
 //下载文件片段
-void MainWindow::sendDataDownfileseg(const QString &file_path, qint64 start_bit, int len)
+void MainWindow::sendDataDownfileseg(qint64 startbit, int file_id, int len)
 {
     /********************************
     "function": "downfileseg",
@@ -1045,10 +1208,11 @@ void MainWindow::sendDataDownfileseg(const QString &file_path, qint64 start_bit,
     //用户未登录
     if(!isLoginUser())
         return;
+
     Json::Value sendJson;
     sendJson["function"] = "downfileseg";
-    sendJson["fileid"] = m_fileid;
-    sendJson["startbit"] = start_bit;
+    sendJson["fileid"] = file_id;
+    sendJson["startbit"] = startbit;
     sendJson["size"] = len;
 
     QString sendbuf = sendJson.toStyledString().data();
@@ -1101,7 +1265,7 @@ void MainWindow::downfileNextSeg()
         //下载文件片段
         if(remain_len < one_recv_len)
             one_recv_len = remain_len;
-        sendDataDownfileseg(m_filepath, m_startbit, one_recv_len);
+        sendDataDownfileseg(m_startbit, m_fileid, one_recv_len);
 
         QTime qtime_1 = QTime::currentTime();
         if(qtime_1.second() != qtime_0.second()){
@@ -1128,10 +1292,10 @@ void MainWindow::downfileNextSeg()
 void MainWindow::sendDataRmfile(const QString &file_path)
 {
     qDebug() << "rmfile "<< file_path;
-
     //用户未登录
     if(!isLoginUser())
         return;
+
     Json::Value sendJson;
     sendJson["function"] = "rmfile";
     sendJson["path"] = file_path.toStdString();
@@ -1149,10 +1313,10 @@ void MainWindow::sendDataRmfile(const QString &file_path)
 void MainWindow::sendDataMkdir(const QString &dir_path)
 {
     qDebug() << "mkdir "<< dir_path.toLocal8Bit();
-
     //用户未登录
-    //if(!isLoginUser())
-    //    return;
+    if(!isLoginUser())
+        return;
+
     Json::Value sendJson;
     sendJson["function"] = "mkdir";
     sendJson["path"] = dir_path.toStdString();
@@ -1163,7 +1327,7 @@ void MainWindow::sendDataMkdir(const QString &dir_path)
     QByteArray sendba = QStr2LocalBa(sendbuf);
 
     //### 测试中文编码转回
-#if 1
+#if DEBUG_CNCODE
     Json::CharReaderBuilder reader;
     Json::Value recvJson;
     JSONCPP_STRING errs;
@@ -1191,10 +1355,10 @@ void MainWindow::sendDataMkdir(const QString &dir_path)
 void MainWindow::sendDataRmdir(const QString &dir_path)
 {
     qDebug() << "rmdir "<< dir_path;
-
     //用户未登录
     if(!isLoginUser())
         return;
+
     Json::Value sendJson;
     //sendJson["function"] = "rmdir";
     sendJson["function"] = "rmfile";    //删文件和删目录命令合并

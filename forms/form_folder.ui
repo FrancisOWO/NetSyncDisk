@@ -75,7 +75,7 @@
        </layout>
       </item>
       <item row="0" column="1">
-       <widget class="QPushButton" name="pbtnChooseRoot">
+       <widget class="QPushButton" name="pbtnChoLocalDir">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -93,7 +93,7 @@
        </widget>
       </item>
       <item row="0" column="2">
-       <widget class="QPushButton" name="pbtnChgRoot">
+       <widget class="QPushButton" name="pbtnBandLocalDir">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -106,7 +106,7 @@
          </font>
         </property>
         <property name="text">
-         <string>更换目录</string>
+         <string>绑定目录</string>
         </property>
        </widget>
       </item>
@@ -194,7 +194,7 @@
       </font>
      </property>
      <property name="title">
-      <string>本地目录</string>
+      <string>本地绑定目录</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
@@ -241,7 +241,7 @@
       </font>
      </property>
      <property name="title">
-      <string>远程目录</string>
+      <string>远程绑定目录</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
       <item row="0" column="0">

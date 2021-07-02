@@ -139,7 +139,13 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="lnConStatus"/>
+       <widget class="QLineEdit" name="lnConStatus">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+       </widget>
       </item>
       <item>
        <spacer name="horizontalSpacer_2">

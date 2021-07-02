@@ -41,6 +41,8 @@ void FormFolder::InitMembers()
     m_enq_enable = 1;
     m_autoUpd_flag = 0;
 
+    resetUserid();  //清userid
+
     ui->treeFolder->setHeaderHidden(true);      //隐藏表头
     ui->treeRemote->setHeaderHidden(true);
 
@@ -48,8 +50,8 @@ void FormFolder::InitMembers()
 
 void FormFolder::InitConnections()
 {
-    connect(ui->pbtnChooseRoot, SIGNAL(clicked()), this, SLOT(chooseRootDir()));
-    connect(ui->pbtnChgRoot, SIGNAL(clicked()), this, SLOT(changeRootDir()));
+    connect(ui->pbtnChoLocalDir, SIGNAL(clicked()), this, SLOT(chooseRootDir()));
+    connect(ui->pbtnBandLocalDir, SIGNAL(clicked()), this, SLOT(changeRootDir()));
     connect(ui->pbtnUpdFolder, SIGNAL(clicked()), this, SLOT(updateFolderTree()));
 
     connect(ui->pbtnChooseFile, SIGNAL(clicked()), this, SLOT(chooseFile()));
@@ -70,7 +72,7 @@ void FormFolder::InitConnections()
 void FormFolder::chooseRootDir()
 {
     QString path = QFileDialog::getExistingDirectory(
-                nullptr, CStr2LocalQStr("选择顶层目录"), m_root_dir);
+                nullptr, CStr2LocalQStr("选择本地目录"), m_root_dir);
     ui->lnRootDir->setText(path);
 }
 
@@ -107,8 +109,9 @@ void FormFolder::changeRootDir()
     //目录存在
     else {
         QString title = CStr2LocalQStr("提示");
-        QString info = path + CStr2LocalQStr("目录更换成功！");
+        QString info = path + CStr2LocalQStr("目录绑定成功！");
         QMessageBox::information(nullptr, title, info);
+        emit banded(path, "/");
         //目录监视
         m_pFilesysWatcher->removePath(m_root_dir);  //删除原目录
         m_root_dir = path;
@@ -119,7 +122,7 @@ void FormFolder::changeRootDir()
     ui->lnRootDir->setText(m_root_dir);
 }
 
-void FormFolder::setRootDir(const QString& dir)
+void FormFolder::setLocalDir(const QString& dir)
 {
     m_root_dir = dir;
     ui->lnRootDir->setText(m_root_dir);
@@ -350,6 +353,16 @@ void FormFolder::SyncQClear()
     m_enq_enable = 1;
 }
 
+void FormFolder::setUserid(int userid)
+{
+    m_userid = userid;
+}
+
+void FormFolder::resetUserid()
+{
+    m_userid = -1;
+}
+
 QString FormFolder::getModeStr(int mode)
 {
     QString mode_str;
@@ -368,9 +381,9 @@ QString FormFolder::getModeStr(int mode)
     return mode_str;
 }
 
-static void WriteSyncLog(const QByteArray &out_ba)
+void FormFolder::WriteSyncLog(const QByteArray &out_ba)
 {
-    QString filename = "sync_output.txt";
+    QString filename = QString::number(m_userid) + ".sync.log";
     QFile qfout(filename);
     if(!qfout.open(QFile::ReadWrite)){
         return;

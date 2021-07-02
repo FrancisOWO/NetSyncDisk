@@ -25,7 +25,7 @@ public:
     explicit FormFolder(QWidget *parent = nullptr);
     ~FormFolder();
 
-    void setRootDir(const QString& dir);
+    void setLocalDir(const QString& dir);
     QString getRootDir();
 
 public:
@@ -37,6 +37,11 @@ public:
     QString m_last_path;
 
 public:
+    void setUserid(int userid);
+    void resetUserid();
+
+    void WriteSyncLog(const QByteArray &out_ba);
+
     QString getModeStr(int mode);
     void SyncQDequeue();
 
@@ -52,6 +57,8 @@ private:
     Ui::FormFolder *ui;
     QString m_root_dir;
     bool m_autoUpd_flag;
+
+    int m_userid;
 
     QFileSystemWatcher *m_pFilesysWatcher;
 
@@ -85,6 +92,8 @@ private slots:
     void updateAutoUpdFlag();
 
 signals:
+    void banded(const QString &local_dir, const QString &remote_dir);
+
     void upfile(const QString &file_path);
 
     //## 空文件不同步，无需mkfile

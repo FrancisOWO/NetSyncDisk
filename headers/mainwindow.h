@@ -24,18 +24,18 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    void setPRegister(FormRegister *value);
-
 public:
     static const int STAT_WAIT      = 0;
     static const int STAT_REGISTER  = 1;
     static const int STAT_LOGIN     = 2;
-    static const int STAT_UPFILE    = 3;
-    static const int STAT_UPSEG     = 4;
-    static const int STAT_RMFILE    = 5;
-    static const int STAT_MKDIR     = 6;
-    static const int STAT_RMDIR     = 7;
-    static const int STAT_DOWNSEG   = 8;
+    static const int STAT_LOGOUT    = 3;
+    static const int STAT_UPFILE    = 4;
+    static const int STAT_UPSEG     = 5;
+    static const int STAT_RMFILE    = 6;
+    static const int STAT_MKDIR     = 7;
+    static const int STAT_RMDIR     = 8;
+    static const int STAT_DOWNSEG   = 9;
+
 
     static const int CONN_NO    = 0;
     static const int CONN_ING   = 1;
@@ -67,10 +67,21 @@ private:
     void InitMembers();
     void InitConnections();
     void InitSocket();
+    void DestroySocket();
 
+    bool isConnected();
     bool isLoginUser();
-    void setConStatus(int status);
+    void setConnectStatus(int status);
 
+    void setLoginUI();
+    void setNotLoginUI();
+
+    void WriteConnectLog(const char *str);
+    void WriteConnectLog(const QString &str);
+
+    void WriteConnectRec(const QString &local_dir, const QString &remote_dir);   //绑定记录
+
+    //Json解析
     void parseJson(const QByteArray &str_ba);
 
     void parseJsonRegister(const Json::Value &recvJson);
@@ -91,7 +102,12 @@ private slots:
     void setUsername();
     void clearUsername();
     void clearUserid();
+    void clearUser();
+
     void clearUpfile();
+
+    //绑定目录
+    void WriteBandLog(const QString &local_dir, const QString &remote_dir);
 
     void connectServer();       //连接服务器
     void disconnectServer();    //断开连接
@@ -125,7 +141,7 @@ private slots:
 
     void sendDataAskAllPath();      //请求目录
     void sendDataDownfile(const QString &file_path);    //下载文件
-    void sendDataDownfileseg(const QString &file_path, qint64 m_startbit, int len);    //下载文件片段
+    void sendDataDownfileseg(qint64 startbit, int file_id, int len);    //下载文件片段
 
 };
 #endif // MAINWINDOW_H
