@@ -77,6 +77,8 @@ private:
     void setLoginUI();
     void setNotLoginUI();
 
+    void renameFileWithoutTmp();
+
     void WriteConnectLog(const char *str);
     void WriteConnectLog(const QString &str);
 

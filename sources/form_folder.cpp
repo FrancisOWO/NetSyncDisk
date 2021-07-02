@@ -15,9 +15,9 @@
 
 #include <QDebug>
 
-#include "tools.h"
-
 #include <iostream>
+
+#include "tools.h"
 
 FormFolder::FormFolder(QWidget *parent) :
     QWidget(parent),
@@ -421,6 +421,18 @@ void FormFolder::SyncQDequeue()
     return;
 }
 
+//添加监视
+void FormFolder::AddWatchPath(const QString &path)
+{
+    m_pFilesysWatcher->addPath(path);
+}
+
+//取消监视
+void FormFolder::RemoveWatchPath(const QString &path)
+{
+    m_pFilesysWatcher->removePath(path);
+}
+
 //处理同步请求
 void FormFolder::ProcessSync()
 {
@@ -602,9 +614,16 @@ void FormFolder::updateFolderChilds(QTreeWidgetItem *pParent, const QString &abs
         if(!watch_files.contains(file_path)){
             qDebug() << CStr2LocalQStr("添加监视文件！") << file_path;
             m_pFilesysWatcher->addPath(file_path);        //添加监视
-            //## 空文件不同步
-            //同步文件
-            SyncFileOrDir(file_path, SYNC_UPFILE);
+            //过滤刚下载的文件
+            if(file_path != m_temp_path){
+                //## 同步文件
+                SyncFileOrDir(file_path, SYNC_UPFILE);
+            }
+            else {
+                qDebug() << CStr2LocalQStr("过滤文件") << m_temp_path;
+                m_temp_path = "";
+            }
+
         }
     }
 

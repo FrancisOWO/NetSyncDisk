@@ -12,6 +12,7 @@
 #include <QSpinBox>
 #include <QMessageBox>
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QTextCodec>
@@ -21,6 +22,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <cstdlib>
 
 #include "tools.h"
 
@@ -239,6 +241,23 @@ void MainWindow::setNotLoginUI()
     ui->pbtnLogin->setVisible(true);
     ui->pbtnRegister->setVisible(true);
     ui->pbtnLogout->setVisible(false);
+}
+
+void MainWindow::renameFileWithoutTmp()
+{
+    int newpath_len = m_filepath.length() - 4;  //去掉".tmp"
+    QString new_filepath = m_filepath.mid(0, newpath_len);
+    //改名前，过滤以防止监视
+    m_pFolder->m_temp_path = new_filepath;
+    qDebug() <<"rename "<< m_filepath << " "<< new_filepath;
+    if(!QFile::rename(m_filepath, new_filepath)){    //改名
+        MyMessageBox::warning("警告", "存在冲突，覆盖同名文件！");
+        QFile::remove(new_filepath);
+        QFile::rename(m_filepath, new_filepath);
+    }
+    m_filepath = new_filepath;
+    m_pFolder->AddWatchPath(m_filepath);    //手动添加监视
+
 }
 
 void MainWindow::WriteConnectLog(const char *str)
@@ -660,7 +679,8 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
     m_total_len = recvJson["length"].asInt();   //文件长度
     m_fileid = recvJson["fileid"].asInt();      //文件id
 
-    QString downfile_str = m_filepath + CStr2LocalQStr(" *文件下载中......");
+    QString downfile_str = m_filepath.mid(0, -5)
+            + CStr2LocalQStr(" *文件下载中......");
     ui->lnStatus->setText(downfile_str);
     //绝对路径（加'/'）
     m_filepath = m_pFolder->getRootDir() + "/" + m_filepath;
@@ -714,12 +734,14 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
         QFileInfo file_info(m_filepath);
         int total_len = file_info.size();
         int base_len = m_pFolder->getRootDir().length() + 1;
-        QString status_str = m_filepath.mid(base_len)
+        QString status_str = m_filepath.mid(base_len, -5)
                 + CStr2LocalQStr(" *文件下载完成！");
         ui->lnStatus->setText(status_str);
         ui->progStatus->setValue(100);
         QString prog_str = getByteNumRatio(total_len, total_len);
         ui->lnBytes->setText(prog_str);
+
+        renameFileWithoutTmp();
 #if 1
         MyMessageBox::information("提示", "下载完成！");
 #endif
@@ -1234,6 +1256,39 @@ void MainWindow::sendDataDownfileseg(qint64 startbit, int file_id, int len)
     sendData(sendba);     //发送数据
 }
 
+bool createFile(const QString &rel_path)
+{
+    //QString create_cmd = "md " + rel_path;
+    //system(create_cmd.toStdString().c_str()); //注意斜杠
+    //return true;
+
+    QStringList split_dir = rel_path.split('/');
+    int split_len = split_dir.length();
+    if(split_len < 1)
+        return false;
+    //递归创建文件夹
+    else if(split_len > 1){
+        int dir_cnt = split_dir.count() - 1;
+        QString temp_path;
+        for(int i = 0; i < dir_cnt; i++){
+            temp_path += split_dir[i] + "/";
+            QDir temp_dir(temp_path);
+            if(!temp_dir.exists()){
+                if(!temp_dir.mkdir(temp_path))
+                    return false;
+            }
+        }
+    }
+    //创建文件
+    QFile file_creat(rel_path);
+    if(!file_creat.open(QFile::WriteOnly))
+        return false;
+    file_creat.close();
+
+    return true;
+}
+
+
 //下载文件片段
 void MainWindow::downfileSeg(const QByteArray &content_ba)
 {
@@ -1241,11 +1296,17 @@ void MainWindow::downfileSeg(const QByteArray &content_ba)
     QString file_path = m_filepath;
     int len = content_ba.length();
 
-
     qDebug() <<"down file seg......";
+    //QMessageBox::information(nullptr, "path", file_path);
+
+    if(!createFile(file_path)){
+        qDebug() << "Create "<< file_path << " ERROR";
+    }
+
     QFile file_out(file_path);
     if(!file_out.open(QIODevice::ReadWrite)){
         qDebug() << CStr2LocalQStr("文件打开失败！") << file_path.toLocal8Bit();
+        MyMessageBox::critical("提示", "文件打开失败！");
         return;
     }
     qDebug() <<"*****************************************"<< len;

@@ -35,6 +35,7 @@ public:
     static const int SYNC_RMDIR = 3;
 
     QString m_last_path;
+    QString m_temp_path;
 
 public:
     void setUserid(int userid);
@@ -44,6 +45,9 @@ public:
 
     QString getModeStr(int mode);
     void SyncQDequeue();
+
+    void AddWatchPath(const QString &path);
+    void RemoveWatchPath(const QString &path);
 
 public slots:
     void SyncQClear();

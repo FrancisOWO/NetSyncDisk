@@ -8,18 +8,18 @@
 QString Num2ByteNum(const int &num)
 {
     float fnum = num;
-    if(fnum < 1000){
+    if(fnum < 1024){
         return QString::number(num) + "B";
     }
-    fnum = fnum/1000;
-    if(fnum < 1000){
+    fnum = fnum/1024;
+    if(fnum < 1024){
         return QString::number(fnum,'f',2) + "KB";
     }
-    fnum = fnum/1000;
-    if(fnum < 1000){
+    fnum = fnum/1024;
+    if(fnum < 1024){
         return QString::number(fnum,'f',2) + "MB";
     }
-    fnum = fnum/1000;
+    fnum = fnum/1024;
     return QString::number(fnum,'f',2) + "GB";
 }
 
