@@ -270,7 +270,7 @@ void MainWindow::renameFileWithoutTmp()
         log_str += new_filepath;
         WriteConnectLog(log_str);
 
-        MyMessageBox::warning("警告", "存在冲突，覆盖同名文件！");
+        //MyMessageBox::warning("警告", "存在冲突，覆盖同名文件！");
         QFile::remove(new_filepath);
         QFile::rename(m_filepath, new_filepath);
     }
