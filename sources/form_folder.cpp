@@ -243,6 +243,10 @@ void FormFolder::chooseFile()
 {
     //获取文件路径
     QTreeWidgetItem *pNode = ui->treeFolder->currentItem();
+    if(pNode == nullptr){
+        MyMessageBox::critical("错误", "没有在目录树中选中文件！");
+        return;
+    }
     QString file_path = pNode->text(0);     //文件名
     //递归拼接上级路径
     while(pNode->parent() != ui->treeFolder->topLevelItem(0)){
@@ -263,6 +267,10 @@ void FormFolder::chooseRemoteFile()
 {
     //获取文件路径
     QTreeWidgetItem *pNode = ui->treeRemote->currentItem();
+    if(pNode == nullptr){
+        MyMessageBox::critical("错误", "没有在目录树中选中文件！");
+        return;
+    }
     QString file_path = pNode->text(0);     //远程文件路径
     //设置路径
     /*
