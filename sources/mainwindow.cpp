@@ -1421,6 +1421,12 @@ void MainWindow::sendDataAskAllPath()
 
 void MainWindow::SyncDownfile(const QString &file_path)
 {
+    //未绑定目录，不接收
+    if(m_pFolder->getRootDir().length() == 0){
+        qDebug() << "No local dir";
+        return;
+    }
+
     m_downfile_q.enqueue(file_path);
     qDebug() << "q size: "<< m_downfile_q.size();
     if(m_downfile_q.size() == 1){

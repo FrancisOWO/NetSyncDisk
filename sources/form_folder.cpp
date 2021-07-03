@@ -204,6 +204,7 @@ void FormFolder::onDirChanged(const QString &path)
 {
     //qDebug() << CStr2LocalQStr("目录变化！") << path;
     QDir dDir(path);
+    QString save_path;
     static QString rmpath = "";
     if(!dDir.exists()){
         if(path == rmpath){
@@ -213,6 +214,11 @@ void FormFolder::onDirChanged(const QString &path)
         else {
             qDebug() << CStr2LocalQStr("删除目录！") << path;
             rmpath = path;
+            save_path = getRootDir();
+            if(path == save_path){
+                MyMessageBox::critical("警告", "同步目录被删除，请重新绑定！");
+                clearTree();
+            }
         }
         //删除的目录自动被移除，removePath总是返回false
         //bool flag =  m_pFilesysWatcher->removePath(path);
@@ -221,7 +227,8 @@ void FormFolder::onDirChanged(const QString &path)
         int start = m_root_dir.length() + 1;    //截取相对路径
         emit rmdir(path.mid(start) + "/");
         */
-        SyncFileOrDir(path, SYNC_RMDIR);
+        if(path != save_path)       //同步目录不删除
+            SyncFileOrDir(path, SYNC_RMDIR);
     }
     else {
         rmpath = "";
@@ -467,10 +474,14 @@ void FormFolder::setBandStatus(bool status)
     m_is_banded = status;
 
     //绑定成功，按钮变为解绑
-    if(m_is_banded)
+    if(m_is_banded){
         band_str = CStr2LocalQStr("解除绑定");
-    else
+        ui->lnRootDir->setReadOnly(true);
+    }
+    else {
         band_str = CStr2LocalQStr("绑定目录");
+        ui->lnRootDir->setReadOnly(false);
+    }
     ui->pbtnBandLocalDir->setText(band_str);
 }
 
