@@ -874,7 +874,7 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
 
     m_pFolder->RemoveWatchPath(abs_path);      //取消监视，防止下载后被上传
 
-    QString downfile_str = real_path + CStr2LocalQStr(" *文件下载中......");
+    QString downfile_str = m_filepath + CStr2LocalQStr(" *文件下载中......");
     ui->lnStatus->setText(downfile_str);
     //绝对路径（加'/'）
     m_filepath = m_pFolder->getRootDir() + "/" + m_filepath;

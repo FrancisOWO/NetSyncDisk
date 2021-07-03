@@ -20,20 +20,24 @@ INCLUDEPATH += \
     headers/
 
 SOURCES += \
+    sources/fileComp.cpp \
     sources/form_folder.cpp \
     sources/form_login.cpp \
     sources/form_register.cpp \
     sources/jsoncpp.cpp \
     sources/main.cpp \
     sources/mainwindow.cpp \
+    sources/md5.cpp \
     sources/tools.cpp
 
 HEADERS += \
+    headers/fileComp.h \
     headers/form_folder.h \
     headers/form_login.h \
     headers/form_register.h \
     headers/json.h \
     headers/mainwindow.h \
+    headers/md5.h \
     headers/tools.h
 
 FORMS += \

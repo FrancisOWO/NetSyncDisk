@@ -238,9 +238,10 @@ void FormFolder::chooseFile()
     }
     //ÉèÖÃÂ·¾¶
     QString abs_path = m_root_dir + "/" + file_path;
+    ui->lnFilePath->setText(file_path);
+
     SyncFileOrDir(abs_path, SYNC_UPFILE);
 
-    //ui->lnFilePath->setText(file_path);
     //emit upfile(file_path);
 }
 
