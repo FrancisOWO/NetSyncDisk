@@ -109,6 +109,12 @@ private:
     void parseJsonDownfile(const Json::Value &recvJson);
     void parseJsonDownfileseg(const Json::Value &recvJson, const QByteArray &str_ba);
 
+    void parseJsonSyncfile(const Json::Value &recvJson);
+
+    void parseJsonRmfile(const Json::Value &recvJson);
+    void parseJsonMkdir(const Json::Value &recvJson);
+    void parseJsonRmdir(const Json::Value &recvJson);
+
 private slots:
     void setUsername();
     void clearUsername();
@@ -154,5 +160,6 @@ private slots:
     void sendDataDownfile(const QString &file_path);    //下载文件
     void sendDataDownfileseg(qint64 startbit, int file_id, int len);    //下载文件片段
 
+    void sendDataSyncfile(const QString &file_path);
 };
 #endif // MAINWINDOW_H

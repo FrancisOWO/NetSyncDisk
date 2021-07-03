@@ -557,7 +557,16 @@ void MainWindow::parseJson(const QByteArray &str_ba)
     else if(recvJson["function"] ==  "downfileseg"){
         parseJsonDownfileseg(recvJson, str_ba);
     }
-
+    else if(recvJson["function"] == "syncfile"){
+        parseJsonSyncfile(recvJson);
+    }
+    else if(recvJson["function"] == "rmfile"){
+        parseJsonRmfile(recvJson);
+    }
+    else if(recvJson["function"] == "mkdir"){
+        parseJsonMkdir(recvJson);
+    }
+    return;
 }
 
 //注册
@@ -619,7 +628,8 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
 
         //MyMessageBox::information("提示", "已同步，无需上传！");
         int base_len = m_pFolder->getRootDir().length() + 1;
-        QString upfile_str = m_filepath.mid(base_len) + CStr2LocalQStr(" *文件上传完成！");
+        QString save_path = m_filepath.mid(base_len);
+        QString upfile_str = save_path + CStr2LocalQStr(" *文件上传完成！");
         ui->progStatus->setValue(100);
         ui->lnStatus->setText(upfile_str);
         QFileInfo file_info(m_filepath);
@@ -628,12 +638,13 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
         ui->lnBytes->setText(prog_str);
         qDebug() <<"parse upfile clear!!!";
         clearUpfile();
-
         /*
         if(m_filepath == m_pFolder->m_last_path){
             MyMessageBox::information("提示", "同步完成！");
         }*/
         m_pFolder->SyncQDequeue();      //出队
+
+        sendDataSyncfile(save_path);
         return;
     }
     else {
@@ -676,8 +687,8 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
         QFileInfo file_info(m_filepath);
         int total_len = file_info.size();
         int base_len = m_pFolder->getRootDir().length() + 1;
-        QString status_str = m_filepath.mid(base_len)
-                + CStr2LocalQStr(" *文件上传完成！");
+        QString save_path = m_filepath.mid(base_len);
+        QString status_str = save_path + CStr2LocalQStr(" *文件上传完成！");
         ui->lnStatus->setText(status_str);
         ui->progStatus->setValue(100);
         QString prog_str = getByteNumRatio(total_len, total_len);
@@ -687,13 +698,16 @@ void MainWindow::parseJsonUpfileseg(const Json::Value &recvJson)
 #endif
         qDebug() <<"parse upfileseg finish clear!!!";
         clearUpfile();
-
         /*
         if(m_filepath == m_pFolder->m_last_path){
             MyMessageBox::information("提示", "同步完成！");
         }*/
 
         m_pFolder->SyncQDequeue();      //处理完成，出队
+
+        //发送同步请求
+        sendDataSyncfile(save_path);
+
         return;
     }
     //## 发文件片段，不清标志位
@@ -720,6 +734,81 @@ void MainWindow::parseJsonAskAllPath(const Json::Value &recvJson)
     ui->lnBytes->setText("");
 
     m_pFolder->InitRemoteTree(recvJson);
+}
+
+//同步请求
+void MainWindow::parseJsonSyncfile(const Json::Value &recvJson)
+{
+    /************************************************
+    "function": "syncfile"
+    "path": "1/2/test.txt"
+    "md5":
+     ************************************************/
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "path:" << recvJson["path"].asCString();
+    qDebug() << "file md5:" << recvJson["md5"].asCString();
+
+    //接收文件
+    QString file_path = QString::fromLocal8Bit(recvJson["path"].asCString());
+    sendDataDownfile(file_path);
+}
+
+//删除文件
+void MainWindow::parseJsonRmfile(const Json::Value &recvJson)
+{
+    /************************************************
+    "function": "rmfile",
+    "path"  : "1/2/text.txt"
+     ************************************************/
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "path:" << recvJson["path"].asCString();
+
+    QString rel_path = QString::fromLocal8Bit(recvJson["path"].asCString());
+    QString abs_path = m_pFolder->getRootDir() + "/" + rel_path;
+    qDebug() <<"abs file:" << abs_path;
+
+    //删除文件
+    QFile::remove(abs_path);
+    return;
+}
+
+//创建目录
+void MainWindow::parseJsonMkdir(const Json::Value &recvJson)
+{
+    /************************************************
+    "function": "mkdir"
+    "path": "1/2/"
+     ************************************************/
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "path:" << recvJson["path"].asCString();
+
+    QString rel_dir = QString::fromLocal8Bit(recvJson["path"].asCString());
+    QString abs_dir = m_pFolder->getRootDir() + "/" + rel_dir;
+    qDebug() <<"abs dir:" << abs_dir;
+
+    //创建目录
+    createDir(abs_dir);
+    return;
+}
+
+//删除目录
+void MainWindow::parseJsonRmdir(const Json::Value &recvJson)
+{    /************************************************
+    "function": "rmdir"
+    "path": "1/2/"
+    "md5":
+     ************************************************/
+    qDebug() << "function:" << recvJson["function"].asCString();
+    qDebug() << "path:" << recvJson["path"].asCString();
+
+    QString rel_dir = QString::fromLocal8Bit(recvJson["path"].asCString());
+    QString abs_dir = m_pFolder->getRootDir() + "/" + rel_dir;
+    qDebug() <<"abs dir:" << abs_dir;
+
+    //删除目录
+    QDir temp_dir(abs_dir);
+    temp_dir.removeRecursively();
+    return;
 }
 
 //下载文件
@@ -1315,7 +1404,37 @@ void MainWindow::sendDataDownfile(const QString &file_path)
     sendData(sendba);     //发送数据
 }
 
-//下载文件片段
+//同步文件
+void MainWindow::sendDataSyncfile(const QString &file_path)
+{
+    /********************************
+    "function": "syncfile",
+    "path"  : "1/2/test.txt",
+    "md5" : "xxx"
+     *******************************/
+    qDebug() << "syncfile";
+    //用户未登录
+    if(!isLoginUser())
+        return;
+
+    QString abs_path = m_pFolder->getRootDir() + "/" + file_path;
+    QString md5 = getFileMD5(abs_path);
+
+    Json::Value sendJson;
+    sendJson["function"] = "syncfile";
+    sendJson["path"] = file_path.toStdString();
+    sendJson["md5"] = md5.toStdString();
+
+    QString sendbuf = sendJson.toStyledString().data();
+    ui->txtSend->setText(sendbuf);
+
+    QByteArray sendba = QStr2LocalBa(sendbuf);
+    m_recv_status = STAT_WAIT;
+    sendData(sendba);     //发送数据
+
+}
+
+//下载文件片
 void MainWindow::sendDataDownfileseg(qint64 startbit, int file_id, int len)
 {
     /********************************
