@@ -633,13 +633,16 @@ void MainWindow::parseJsonUpfile(const Json::Value &recvJson)
         if(m_filepath == m_pFolder->m_last_path){
             MyMessageBox::information("提示", "同步完成！");
         }*/
-
         m_pFolder->SyncQDequeue();      //出队
         return;
     }
-    m_fileid = recvJson["fileid"].asInt();
-    m_startbit = recvJson["startbit"].asInt();
-
+    else {
+        m_fileid = recvJson["fileid"].asInt();
+        m_startbit = recvJson["startbit"].asInt();
+        QString out_str = CStr2LocalQStr("真实上传，从") + QString::number(m_startbit)
+                + CStr2LocalQStr("字节开始");
+        m_pFolder->WriteSyncLog(out_str.toLocal8Bit());
+    }
     qDebug() << "2.file_path: "<< m_filepath;
 
     m_recv_status = STAT_WAIT;    //清标志位
@@ -736,7 +739,9 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
     int parse_len = recvJson["length"].asInt();
 
     m_startbit = 0;
-    QFileInfo file_info(m_filepath);
+    QString abs_path = m_pFolder->getRootDir() + "/" + m_filepath;
+    QFileInfo file_info(abs_path);
+    qDebug() << "tmp path: " << abs_path;
     if(file_info.exists()){
         int file_size = file_info.size();
         if(parse_len > file_size)     //断点续载
@@ -745,9 +750,16 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
     m_total_len = recvJson["length"].asInt();   //文件长度
     m_fileid = recvJson["fileid"].asInt();      //文件id
 
+    QString out_str = CStr2LocalQStr("真实下载，从") + QString::number(m_startbit)
+            + CStr2LocalQStr("字节开始");
+    m_pFolder->WriteSyncLog(out_str.toLocal8Bit());
+
     int realpath_len = getRealpathLen(m_filepath);
-    QString downfile_str = m_filepath.mid(0, realpath_len)
-            + CStr2LocalQStr(" *文件下载中......");
+    QString real_path = m_filepath.mid(0, realpath_len);
+    abs_path = m_pFolder->getRootDir() + "/" + real_path;
+    m_pFolder->RemoveWatchPath(abs_path);      //取消监视，防止下载后被上传
+
+    QString downfile_str = real_path + CStr2LocalQStr(" *文件下载中......");
     ui->lnStatus->setText(downfile_str);
     //绝对路径（加'/'）
     m_filepath = m_pFolder->getRootDir() + "/" + m_filepath;

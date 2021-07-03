@@ -85,6 +85,7 @@ void FormFolder::bandRootDir()
     if(m_is_banded){    //已绑定，点击，解除绑定
         unBand();
         setBandStatus(false);
+        MyMessageBox::information("提示", "解绑成功！");
         return;
     }
 
@@ -435,6 +436,10 @@ void FormFolder::clearTree()
 
     ui->treeFolder->clear();
     ui->treeRemote->clear();
+
+    ui->lnRootDir->clear();
+    ui->lnFilePath->clear();
+    ui->lnRemoteFilePath->clear();
 
     return;
 }
