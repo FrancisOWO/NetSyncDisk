@@ -5,6 +5,7 @@
 #include <QTcpSocket>
 #include <QString>
 #include <QCloseEvent>
+#include <QQueue>
 
 #include "form_register.h"
 #include "form_login.h"
@@ -64,6 +65,8 @@ private:
     QString m_username;
     QString m_filepath;
 
+    QQueue<QString> m_downfile_q;
+
 private:
     void InitMembers();
     void InitConnections();
@@ -120,13 +123,17 @@ private slots:
     void clearUsername();
     void clearUserid();
     void clearUser();
-
     void clearUpfile();
+
+    void DownFileQDequeue();
+    void DownFileQClear();
 
     //绑定目录
     void WriteBandLog(const QString &local_dir, const QString &remote_dir);
 
     void connectServer();       //连接服务器
+
+    void onClickDisconnect();
     void disconnectServer();    //断开连接
 
     void sendFileData(const QByteArray &json_ba, const QByteArray &content_ba);
@@ -157,6 +164,8 @@ private slots:
     void sendDataRmdir(const QString &dir_path);    //删除目录
 
     void sendDataAskAllPath();      //请求目录
+
+    void SyncDownfile(const QString &file_path);        //同步下载
     void sendDataDownfile(const QString &file_path);    //下载文件
     void sendDataDownfileseg(qint64 startbit, int file_id, int len);    //下载文件片段
 

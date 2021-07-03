@@ -90,7 +90,7 @@ void MainWindow::InitConnections()
 {
     //Socket连接
     connect(ui->pbtnConnect, SIGNAL(clicked()), this, SLOT(connectServer()));
-    connect(ui->pbtnDisconnect, SIGNAL(clicked()), this, SLOT(disconnectServer()));
+    connect(ui->pbtnDisconnect, SIGNAL(clicked()), this, SLOT(onClickDisconnect()));
 
     connect(ui->pbtnSend, SIGNAL(clicked()), this, SLOT(sendDataFromBox()));
     connect(ui->pbtnRecv, SIGNAL(clicked()), this, SLOT(recvDataFromBox()));
@@ -124,8 +124,10 @@ void MainWindow::InitConnections()
     connect(m_pFolder, SIGNAL(rmdir(const QString &)), this, SLOT(sendDataRmdir(const QString &)));
     //分段传文件
     //connect(ui->pbtnUpfile, SIGNAL(clicked()), this, SLOT(upfileBySeg()));
-    //下载文件
-    connect(m_pFolder, SIGNAL(downfile(const QString &)), this, SLOT(sendDataDownfile(const QString &)));
+    //下载文件（先接sync，加入队列）
+    connect(m_pFolder, SIGNAL(downfile(const QString &)), this, SLOT(SyncDownfile(const QString &)));
+    //清空队列
+    connect(m_pFolder, SIGNAL(cleardownq()), this, SLOT(DownFileQClear()));
 
 #if 0
     connect(m_server_sock, &QTcpSocket::connected, [=](){
@@ -203,6 +205,19 @@ void MainWindow::InitLogDir()
         createDir(path);
     }
     return;
+}
+
+void MainWindow::DownFileQDequeue()
+{
+    qDebug() <<"down q size: "<< m_downfile_q.size();
+    if(m_downfile_q.size() > 0)
+        m_downfile_q.dequeue();
+}
+
+void MainWindow::DownFileQClear()
+{
+    qDebug() <<"clear down q";
+    m_downfile_q.clear();
 }
 
 void MainWindow::hideSubWin()
@@ -289,6 +304,8 @@ void MainWindow::setNotLoginUI()
     ui->pbtnLogout->setVisible(false);
     ui->pbtnFolder->setVisible(false);
     ui->pbtnAskPath->setVisible(false);
+
+    clearUser();
 }
 
 void MainWindow::renameFileWithoutTmp()
@@ -407,6 +424,13 @@ void MainWindow::disconnectServer()
     WriteConnectLog("断开连接");
     //MyMessageBox::information("提示", "断开连接！");
     setConnectStatus(CONN_NO);      //未连接
+}
+
+void MainWindow::onClickDisconnect()
+{
+    disconnectServer();
+    setNotLoginUI();
+    hideSubWin();
 }
 
 //发送文件数据
@@ -599,6 +623,7 @@ void MainWindow::parseJsonLogin(const Json::Value &recvJson)
         MyMessageBox::information("提示", "登录成功！");
 
         //清空请求队列
+        m_downfile_q.clear();
         m_pFolder->SyncQClear();
     }
     else {
@@ -750,7 +775,7 @@ void MainWindow::parseJsonSyncfile(const Json::Value &recvJson)
 
     //接收文件
     QString file_path = QString::fromLocal8Bit(recvJson["path"].asCString());
-    sendDataDownfile(file_path);
+    SyncDownfile(file_path);
 }
 
 //删除文件
@@ -846,6 +871,7 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
     int realpath_len = getRealpathLen(m_filepath);
     QString real_path = m_filepath.mid(0, realpath_len);
     abs_path = m_pFolder->getRootDir() + "/" + real_path;
+
     m_pFolder->RemoveWatchPath(abs_path);      //取消监视，防止下载后被上传
 
     QString downfile_str = real_path + CStr2LocalQStr(" *文件下载中......");
@@ -882,15 +908,21 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
     qDebug() <<"downseg len: "<< content_ba.length();
     if(size != content_ba.length()){
         MyMessageBox::critical("错误", "下载片段长度错误！");
+        DownFileQDequeue();
+        m_pFolder->SyncQDequeue();
         return;
     }
     else if(size == 0){
         MyMessageBox::critical("错误", "下载长度为0！");
+        DownFileQDequeue();
+        m_pFolder->SyncQDequeue();
         return;
     }
     //## 需校验片段的md5
     if(m_startbit + size > m_total_len){       //下载出错
         MyMessageBox::critical("错误", "下载长度错误！");
+        DownFileQDequeue();
+        m_pFolder->SyncQDequeue();
         return;
     }
 
@@ -918,7 +950,16 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
         clearUpfile();
 
         m_pFolder->SyncQDequeue();      //处理完成，出队
-        return;
+
+        //下载队列
+        DownFileQDequeue();
+        if(m_downfile_q.size() > 0){
+            QString next_file = m_downfile_q.head();
+            sendDataDownfile(next_file);
+        }
+        else {
+            return;
+        }
     }
     //本段下载成功，下载下一段
     downfileNextSeg();
@@ -1377,6 +1418,16 @@ void MainWindow::sendDataAskAllPath()
 
 }
 
+void MainWindow::SyncDownfile(const QString &file_path)
+{
+    m_downfile_q.enqueue(file_path);
+    qDebug() << "q size: "<< m_downfile_q.size();
+    if(m_downfile_q.size() == 1){
+        sendDataDownfile(file_path);
+    }
+}
+
+
 //下载文件
 void MainWindow::sendDataDownfile(const QString &file_path)
 {
@@ -1544,6 +1595,7 @@ void MainWindow::downfileNextSeg()
         m_recv_status = STAT_WAIT;
     }
     else {
+        DownFileQDequeue();
         MyMessageBox::critical("错误", "下载字节数为0！");
         return;
     }

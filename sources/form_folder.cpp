@@ -391,6 +391,8 @@ void FormFolder::SyncQClear()
     qDebug() <<"clear syncQ !!!";
     m_sync_q.clear();
     m_enq_enable = 1;
+
+    emit cleardownq();
 }
 
 //解除绑定
@@ -535,12 +537,14 @@ void FormFolder::SyncQDequeue()
 //添加监视
 void FormFolder::AddWatchPath(const QString &path)
 {
+    qDebug() <<"add watch " << path;
     m_pFilesysWatcher->addPath(path);
 }
 
 //取消监视
 void FormFolder::RemoveWatchPath(const QString &path)
 {
+    qDebug() <<"remove watch " << path;
     m_pFilesysWatcher->removePath(path);
 }
 

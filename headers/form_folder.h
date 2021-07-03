@@ -121,6 +121,8 @@ signals:
     void rmdir(const QString &dir_path);        //删除目录
 
     void downfile(const QString &file_path);    //下载文件
+
+    void cleardownq();
 };
 
 #endif // FORM_FOLDER_H
