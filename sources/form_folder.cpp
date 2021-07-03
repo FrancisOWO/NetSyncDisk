@@ -16,6 +16,9 @@
 #include <QDebug>
 
 #include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
 
 #include "tools.h"
 
@@ -139,6 +142,9 @@ void FormFolder::setLocalDir(const QString& dir)
 {
     m_root_dir = dir;
     ui->lnRootDir->setText(m_root_dir);
+
+    m_fcomp.loadFromConf(m_userid);
+
     //目录监视
     m_pFilesysWatcher->addPath(m_root_dir);     //添加新目录
     qDebug() << CStr2LocalQStr("监视目录") << m_root_dir;
@@ -257,7 +263,11 @@ void FormFolder::chooseRemoteFile()
     SyncFileOrDir(abs_path, SYNC_UPFILE);
     */
     ui->lnRemoteFilePath->setText(file_path);
-
+    //未绑定，不同步
+    if(m_root_dir.length() == 0){
+        MyMessageBox::critical("错误", "未绑定本地目录，无法下载！");
+        return;
+    }
     int end_pos = file_path.length() - 1;
     if(file_path[end_pos] == '/'){  //目录
         file_path = m_root_dir + "/" + file_path;
@@ -372,6 +382,10 @@ void FormFolder::updateFolderTree()
 //下载全部
 void FormFolder::DownAll()
 {
+    if(m_root_dir.length() == 0){
+        MyMessageBox::critical("错误", "未绑定本地目录，无法下载！");
+        return;
+    }
     MyMessageBox::information("提示", "开始下载全部！");
     int dlist_len = m_dir_list.length();
     int flist_len = m_file_list.length();
@@ -412,7 +426,7 @@ void FormFolder::unBand()
     SyncQClear();
     m_file_list.clear();
     m_dir_list.clear();
-    m_root_dir = "";
+    m_root_dir.clear();
     ui->treeFolder->clear();
     //清空绑定记录
     emit banded("","");

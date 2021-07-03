@@ -7,6 +7,7 @@
 #include <QFileSystemWatcher>
 #include <QQueue>
 #include "json.h"
+#include "fileComp.h"
 
 namespace Ui {
 class FormFolder;
@@ -38,6 +39,8 @@ public:
 
     QString m_last_path;
     QString m_temp_path;
+
+    FileCompare m_fcomp;
 
 public:
     void unBand();      //È¡Ïû°ó¶¨
@@ -96,7 +99,6 @@ private:
     void updateFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
 
 private slots:
-
     void chooseRootDir();
     void bandRootDir();
 

@@ -868,8 +868,9 @@ void MainWindow::parseJsonDownfile(const Json::Value &recvJson)
             + CStr2LocalQStr("字节开始");
     m_pFolder->WriteSyncLog(out_str.toLocal8Bit());
 
+    int base_len = m_pFolder->getRootDir().length() + 1;
     int realpath_len = getRealpathLen(m_filepath);
-    QString real_path = m_filepath.mid(0, realpath_len);
+    QString real_path = m_filepath.mid(base_len, realpath_len);
     abs_path = m_pFolder->getRootDir() + "/" + real_path;
 
     m_pFolder->RemoveWatchPath(abs_path);      //取消监视，防止下载后被上传
