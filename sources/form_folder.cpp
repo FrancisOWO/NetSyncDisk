@@ -4,18 +4,20 @@
 #include <QStringList>
 #include <QMessageBox>
 #include <QCheckBox>
+#include <QPushButton>
 
 #include <QDir>
 #include <QFileInfo>
 #include <QFileInfoList>
 #include <QFileDialog>
+#include <QFileSystemWatcher>
+
+#include <QTreeWidgetItem>
 
 #include <QDateTime>
 #include <QTime>
 
 #include <QDebug>
-
-#include <iostream>
 
 #include "tools.h"
 
@@ -51,24 +53,24 @@ void FormFolder::InitMembers()
 void FormFolder::InitConnections()
 {
     //选择目录
-    connect(ui->pbtnChoLocalDir, SIGNAL(clicked()), this, SLOT(chooseRootDir()));
-    connect(ui->pbtnBandLocalDir, SIGNAL(clicked()), this, SLOT(changeRootDir()));
-    connect(ui->pbtnUpdFolder, SIGNAL(clicked()), this, SLOT(updateFolderTree()));
+    connect(ui->pbtnChoLocalDir, &QPushButton::clicked, this, &FormFolder::chooseRootDir);
+    connect(ui->pbtnBandLocalDir, &QPushButton::clicked, this, &FormFolder::changeRootDir);
+    connect(ui->pbtnUpdFolder, &QPushButton::clicked, this, &FormFolder::updateFolderTree);
     //选择文件
-    connect(ui->pbtnChooseFile, SIGNAL(clicked()), this, SLOT(chooseFile()));
-    connect(ui->pbtnChoRemoteFile, SIGNAL(clicked()), this, SLOT(chooseRemoteFile()));
+    connect(ui->pbtnChooseFile, &QPushButton::clicked, this, &FormFolder::chooseFile);
+    connect(ui->pbtnChoRemoteFile, &QPushButton::clicked, this, &FormFolder::chooseRemoteFile);
     //自动刷新
-    connect(ui->chkAutoUpd, SIGNAL(clicked()), this, SLOT(updateAutoUpdFlag()));
+    connect(ui->chkAutoUpd, &QPushButton::clicked, this, &FormFolder::updateAutoUpdFlag);
     //清空队列
-    connect(ui->pbtnClearQ, SIGNAL(clicked()), this, SLOT(SyncQClear()));
+    connect(ui->pbtnClearQ, &QPushButton::clicked, this, &FormFolder::SyncQClear);
     //下载全部
-    connect(ui->pbtnDownAll, SIGNAL(clicked()), this, SLOT(DownAll()));
+    connect(ui->pbtnDownAll, &QPushButton::clicked, this, &FormFolder::DownAll);
 
     //监视目录和文件
-    connect(m_pFilesysWatcher, SIGNAL(fileChanged(const QString &)),
-            this, SLOT(onFileChanged(const QString &)));
-    connect(m_pFilesysWatcher, SIGNAL(directoryChanged(const QString &)),
-            this, SLOT(onDirChanged(const QString &)));
+    connect(m_pFilesysWatcher, &QFileSystemWatcher::fileChanged,
+            this, &FormFolder::onFileChanged);
+    connect(m_pFilesysWatcher, &QFileSystemWatcher::directoryChanged,
+            this, &FormFolder::onDirChanged);
 }
 
 void FormFolder::chooseRootDir()
@@ -113,7 +115,7 @@ void FormFolder::changeRootDir()
         QString title = CStr2LocalQStr("提示");
         QString info = path + CStr2LocalQStr("目录绑定成功！");
         QMessageBox::information(nullptr, title, info);
-        emit banded(path, "/");
+        Q_EMIT banded(path, "/");
         //目录监视
         m_pFilesysWatcher->removePath(m_root_dir);  //删除原目录
         m_root_dir = path;
@@ -154,7 +156,7 @@ void FormFolder::onFileChanged(const QString &path)
         //## 同步：删除文件
         /*
         int start = m_root_dir.length() + 1;    //截取相对路径
-        emit rmfile(path.mid(start));
+        Q_EMIT rmfile(path.mid(start));
         */
         SyncFileOrDir(path, SYNC_RMFILE);
 
@@ -172,12 +174,12 @@ void FormFolder::onFileChanged(const QString &path)
         */
         if(file_len != 0){
             //## 同步：上传文件
-            //emit upfile(relt_path);
+            //Q_EMIT upfile(relt_path);
             SyncFileOrDir(path, SYNC_UPFILE);
         }
         else{
             //## 同步：删除文件
-            //emit rmfile(relt_path);
+            //Q_EMIT rmfile(relt_path);
             SyncFileOrDir(path, SYNC_RMFILE);
         }
     }
@@ -202,7 +204,7 @@ void FormFolder::onDirChanged(const QString &path)
         //## 同步：删除目录
         /*
         int start = m_root_dir.length() + 1;    //截取相对路径
-        emit rmdir(path.mid(start) + "/");
+        Q_EMIT rmdir(path.mid(start) + "/");
         */
         SyncFileOrDir(path, SYNC_RMDIR);
     }
@@ -230,7 +232,7 @@ void FormFolder::chooseFile()
     SyncFileOrDir(abs_path, SYNC_UPFILE);
 
     //ui->lnFilePath->setText(file_path);
-    //emit upfile(file_path);
+    //Q_EMIT upfile(file_path);
 }
 
 //选择远程目录
@@ -252,7 +254,7 @@ void FormFolder::chooseRemoteFile()
         createDir(file_path);
     }
     else {      //文件
-        //emit downfile(file_path);
+        //Q_EMIT downfile(file_path);
         SyncFileOrDir(file_path, SYNC_DOWNFILE);
     }
 }
@@ -523,7 +525,7 @@ void FormFolder::SyncFile(const QString &file_path, int mode)
     QString rel_path = file_path.mid(base_len);
     //删除文件
     if(mode == SYNC_RMFILE){
-        emit rmfile(rel_path);
+        Q_EMIT rmfile(rel_path);
         return;
     }
     //上传文件
@@ -537,12 +539,12 @@ void FormFolder::SyncFile(const QString &file_path, int mode)
             return;
         }
         qDebug() << "full path:" << file_path <<", file_path: "<< rel_path;
-        emit upfile(rel_path);
+        Q_EMIT upfile(rel_path);
     }
     //下载文件
     else if(mode == SYNC_DOWNFILE){
         //path为远程路径
-        emit downfile(file_path);
+        Q_EMIT downfile(file_path);
     }
 }
 
@@ -553,12 +555,12 @@ void FormFolder::SyncDir(const QString &dir_path, int mode)
     QString rel_path = dir_path.mid(base_len) + "/";
     //删除目录
     if(mode == SYNC_RMDIR){
-        emit rmdir(rel_path);
+        Q_EMIT rmdir(rel_path);
         return;
     }
     //创建目录
     else if(mode == SYNC_MKDIR){
-        emit mkdir(rel_path);
+        Q_EMIT mkdir(rel_path);
         return;
     }
 }

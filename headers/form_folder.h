@@ -3,10 +3,11 @@
 
 #include <QWidget>
 #include <QString>
-#include <QTreeWidgetItem>
-#include <QFileSystemWatcher>
 #include <QQueue>
 #include "json.h"
+
+class QFileSystemWatcher;
+class QTreeWidgetItem;
 
 namespace Ui {
 class FormFolder;
@@ -51,7 +52,7 @@ public:
     void AddWatchPath(const QString &path);
     void RemoveWatchPath(const QString &path);
 
-public slots:
+public Q_SLOTS:
     void SyncQClear();
 
     void InitRemoteTree(Json::Value recvJson);
@@ -88,7 +89,7 @@ private:
     void addFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
     void updateFolderChilds(QTreeWidgetItem *pParent, const QString &absPath);
 
-private slots:
+private Q_SLOTS:
 
     void chooseRootDir();
     void changeRootDir();
@@ -101,7 +102,7 @@ private slots:
 
     void updateAutoUpdFlag();
 
-signals:
+Q_SIGNALS:
     void banded(const QString &local_dir, const QString &remote_dir);
 
     void upfile(const QString &file_path);

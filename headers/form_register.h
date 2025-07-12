@@ -4,8 +4,6 @@
 #include <QWidget>
 #include <QString>
 
-#include "tools.h"
-
 namespace Ui {
 class FormRegister;
 }
@@ -36,13 +34,13 @@ private:
     int checkUname();
     int checkPwd();
 
-private slots:
+private Q_SLOTS:
     void submitForm();
 
     void changePwd1Vis();
     void changePwd2Vis();
 
-signals:
+Q_SIGNALS:
     void completed();
 
 };

@@ -3,6 +3,8 @@
 #include <QMessageBox>
 #include <QDebug>
 
+#include "tools.h"
+
 FormRegister::FormRegister(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::FormRegister)
@@ -116,7 +118,7 @@ void FormRegister::changePwd2Vis()
 //提交注册表单
 void FormRegister::submitForm()
 {
-    QString title, info;
+    // QString title, info;
     QString pwd1, pwd2;
     username = ui->lnUsername->text();
     pwd1 = ui->lnPwd1->text();
@@ -155,7 +157,7 @@ void FormRegister::submitForm()
     qDebug() << CStr2LocalQStr("输入框更新！");
     //加密
     password = QStr2MD5(password);
-    emit completed();
+    Q_EMIT completed();
 }
 
 //清空表单数据

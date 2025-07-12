@@ -2,15 +2,17 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTcpSocket>
+
 #include <QString>
-#include <QCloseEvent>
 
 #include "form_register.h"
 #include "form_login.h"
 #include "form_folder.h"
 
 #include "json.h"
+
+class QTcpSocket;
+class QCloseEvent;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -103,7 +105,7 @@ private:
     void parseJsonDownfile(const Json::Value &recvJson);
     void parseJsonDownfileseg(const Json::Value &recvJson, const QByteArray &str_ba);
 
-private slots:
+private Q_SLOTS:
     void setUsername();
     void clearUsername();
     void clearUserid();

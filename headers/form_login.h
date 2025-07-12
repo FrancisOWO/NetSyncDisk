@@ -3,8 +3,6 @@
 
 #include <QWidget>
 
-#include "tools.h"
-
 namespace Ui {
 class FormLogin;
 }
@@ -32,12 +30,12 @@ private:
     void InitMembers();
     void InitConnections();
 
-private slots:
+private Q_SLOTS:
     void submitForm();
 
     void changePwdVis();
 
-signals:
+Q_SIGNALS:
     void completed();
 
 };

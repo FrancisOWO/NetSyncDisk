@@ -11,11 +11,15 @@
 
 #include <QSpinBox>
 #include <QMessageBox>
+#include <QPushButton>
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QTextCodec>
+
+#include <QTcpSocket>
+#include <QCloseEvent>
 
 #include <QDebug>
 
@@ -23,10 +27,10 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cstdlib>
-using namespace std;
 
 #include "tools.h"
+
+using namespace std;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -41,14 +45,15 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    // !!! 函数中可能涉及 ui 操作，delete 要在之后
+    disconnectServer();
+    DestroySocket();
+
     delete ui;
 
     delete m_pRegister;
     delete m_pLogin;
     delete m_pFolder;
-
-    disconnectServer();
-    DestroySocket();
 }
 
 void MainWindow::InitMembers()
@@ -87,43 +92,42 @@ void MainWindow::InitMembers()
 void MainWindow::InitConnections()
 {
     //Socket连接
-    connect(ui->pbtnConnect, SIGNAL(clicked()), this, SLOT(connectServer()));
-    connect(ui->pbtnDisconnect, SIGNAL(clicked()), this, SLOT(disconnectServer()));
+    connect(ui->pbtnConnect, &QPushButton::clicked, this, &MainWindow::connectServer);
+    connect(ui->pbtnDisconnect, &QPushButton::clicked, this, &MainWindow::disconnectServer);
 
-    connect(ui->pbtnSend, SIGNAL(clicked()), this, SLOT(sendDataFromBox()));
-    connect(ui->pbtnRecv, SIGNAL(clicked()), this, SLOT(recvDataFromBox()));
+    connect(ui->pbtnSend, &QPushButton::clicked, this, &MainWindow::sendDataFromBox);
+    connect(ui->pbtnRecv, &QPushButton::clicked, this, &MainWindow::recvDataFromBox);
 
     //打开子窗口
-    connect(ui->pbtnRegister, SIGNAL(clicked()), this, SLOT(openRegisterPage()));
-    connect(ui->pbtnLogin, SIGNAL(clicked()), this, SLOT(openLoginPage()));
-    connect(ui->pbtnFolder, SIGNAL(clicked()), this, SLOT(openFolderPage()));
+    connect(ui->pbtnRegister, &QPushButton::clicked, this, &MainWindow::openRegisterPage);
+    connect(ui->pbtnLogin, &QPushButton::clicked, this, &MainWindow::openLoginPage);
+    connect(ui->pbtnFolder, &QPushButton::clicked, this, &MainWindow::openFolderPage);
 
     //发送数据
     //注册
-    connect(m_pRegister, SIGNAL(completed()), this, SLOT(sendDataRegister()));
+    connect(m_pRegister, &FormRegister::completed, this, &MainWindow::sendDataRegister);
     //登录
-    connect(m_pLogin, SIGNAL(completed()), this, SLOT(sendDataLogin()));
+    connect(m_pLogin, &FormLogin::completed, this, &MainWindow::sendDataLogin);
     //登出
-    connect(ui->pbtnLogout, SIGNAL(clicked()), this, SLOT(sendDataLogout()));
+    connect(ui->pbtnLogout, &QPushButton::clicked, this, &MainWindow::sendDataLogout);
     //请求目录
-    connect(ui->pbtnAskPath, SIGNAL(clicked()), this, SLOT(sendDataAskAllPath()));
+    connect(ui->pbtnAskPath, &QPushButton::clicked, this, &MainWindow::sendDataAskAllPath);
 
     //绑定目录
-    connect(m_pFolder, SIGNAL(banded(const QString &, const QString &)),
-            this, SLOT(WriteBandLog(const QString &, const QString &)));
+    connect(m_pFolder, &FormFolder::banded, this, &MainWindow::WriteBandLog);
 
     //上传文件
-    connect(m_pFolder, SIGNAL(upfile(const QString &)), this, SLOT(sendDataUpfile(const QString &)));
+    connect(m_pFolder, &FormFolder::upfile, this, &MainWindow::sendDataUpfile);
     //删除文件
-    connect(m_pFolder, SIGNAL(rmfile(const QString &)), this, SLOT(sendDataRmfile(const QString &)));
+    connect(m_pFolder, &FormFolder::rmfile, this, &MainWindow::sendDataRmfile);
     //创建目录
-    connect(m_pFolder, SIGNAL(mkdir(const QString &)), this, SLOT(sendDataMkdir(const QString &)));
+    connect(m_pFolder, &FormFolder::mkdir, this, &MainWindow::sendDataMkdir);
     //删除目录
-    connect(m_pFolder, SIGNAL(rmdir(const QString &)), this, SLOT(sendDataRmdir(const QString &)));
+    connect(m_pFolder, &FormFolder::rmdir, this, &MainWindow::sendDataRmdir);
     //分段传文件
-    //connect(ui->pbtnUpfile, SIGNAL(clicked()), this, SLOT(upfileBySeg()));
+    //connect(ui->pbtnUpfile, &QPushButton::clicked, this, &MainWindow::upfileBySeg);
     //下载文件
-    connect(m_pFolder, SIGNAL(downfile(const QString &)), this, SLOT(sendDataDownfile(const QString &)));
+    connect(m_pFolder, &FormFolder::downfile, this, &MainWindow::sendDataDownfile);
 
 #if 0
     connect(m_server_sock, &QTcpSocket::connected, [=](){
@@ -132,12 +136,15 @@ void MainWindow::InitConnections()
         setConnectStatus(CONN_OK);
     });
 #endif
-    connect(m_server_sock, &QTcpSocket::readyRead, [=](){
+    // connect 不建议用三参数，改成四参数
+    connect(m_server_sock, &QTcpSocket::readyRead, this, [this](){
         //MyMessageBox::information("提示", "可以读取数据！");
         recvData();     //接收数据
     });
-    typedef void (QAbstractSocket::*QAbstractSocketErrorSignal)(QAbstractSocket::SocketError);
-    connect(m_server_sock, static_cast<QAbstractSocketErrorSignal>(&QTcpSocket::error), [=](){
+    // Qt5.15 弃用 error，改用 errorOccurred
+    // typedef void (QAbstractSocket::*QAbstractSocketErrorSignal)(QAbstractSocket::SocketError);
+    // connect(m_server_sock, static_cast<QAbstractSocketErrorSignal>(&QTcpSocket::error), this, [this](){
+    connect(m_server_sock, &QTcpSocket::errorOccurred, this, [this](){
         if(1 == m_is_connected){
             WriteConnectLog("连接断开");
             qDebug() << CStr2LocalQStr("连接断开！");
@@ -435,7 +442,8 @@ void MainWindow::sendDataFromBox()
     str_ba += (uchar)(0x00ff & len);
     str_ba += (uchar)((0xff00 & len) >> 8);
     //内容
-    str_ba += content;
+    // !!! QString 是 utf16，QByteArray 需包含编码信息 utf8
+    str_ba += content.toUtf8();
     //qDebug() << str;
     m_server_sock->write(str_ba);
 }

@@ -1,7 +1,12 @@
 #include "form_login.h"
 #include "ui_form_login.h"
+
 #include <QMessageBox>
+#include <QPushButton>
+
 #include <QDebug>
+
+#include "tools.h"
 
 FormLogin::FormLogin(QWidget *parent) :
     QWidget(parent),
@@ -35,8 +40,8 @@ void FormLogin::InitMembers()
 
 void FormLogin::InitConnections()
 {
-    connect(ui->pbtnLogin, SIGNAL(clicked()), this, SLOT(submitForm()));
-    connect(ui->chkPwdVis, SIGNAL(clicked()), this, SLOT(changePwdVis()));
+    connect(ui->pbtnLogin, &QPushButton::clicked, this, &FormLogin::submitForm);
+    connect(ui->chkPwdVis, &QPushButton::clicked, this, &FormLogin::changePwdVis);
 
 }
 
@@ -54,7 +59,7 @@ void FormLogin::changePwdVis()
 //提交登录表单
 void FormLogin::submitForm()
 {
-    QString title, info;
+    // QString title, info;
     username = ui->lnUsername->text();
     password = ui->lnPwd->text();
 
@@ -82,7 +87,7 @@ void FormLogin::submitForm()
     qDebug() << CStr2LocalQStr("输入框更新！");
     //加密
     password = QStr2MD5(password);
-    emit completed();
+    Q_EMIT completed();
 }
 
 //清空表单数据
