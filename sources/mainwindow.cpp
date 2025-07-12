@@ -398,7 +398,8 @@ void MainWindow::sendFileData(const QByteArray &json_ba, const QByteArray &conte
     str_ba += "+";     //防止文件中有注释被json解析，用一个字符隔开
     //qDebug() << str;
 
-    //QByteArray ba = str.toLatin1();
+    // !!! toLatin1() 只能转换 ascii 字符，应该用 toUtf8()
+    //QByteArray ba = str.toUtf8();
     str_ba += content_ba;
 #ifdef DEBUG_COUT
     qDebug() <<"ba len: "<< ba.length();
@@ -421,6 +422,7 @@ void MainWindow::sendFileData(const QByteArray &json_ba, const QByteArray &conte
     Json::CharReaderBuilder reader;
     Json::Value recvJson;
     JSONCPP_STRING errs;
+    // toStdString 导致 \0 之后的内容丢失
     std::stringstream ss(content.toStdString());
     bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
     int std_len = recvJson["content"].asString().length();
@@ -481,7 +483,7 @@ void MainWindow::sendData(const QString &content)
     //内容
     str += content;
     //qDebug() << str;
-    m_server_sock->write(str.toLatin1());
+    m_server_sock->write(str.toUtf8());
 }
 #endif
 
@@ -762,6 +764,7 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
     //下载文件片段
     downfileSeg(content_ba);
 
+    // Q: downfileSeg 一定写入成功吗？
     m_startbit += size;    //本段下载完成，更新起始位置
     if(m_startbit == m_total_len){        //下载完成
         QFileInfo file_info(m_filepath);
@@ -840,6 +843,12 @@ void MainWindow::recvData()
 {
     QByteArray str_ba = m_server_sock->readAll();
     qDebug() <<"recvData len: "<< str_ba.length();
+
+    /* TODO
+     * 1、只收到了部分数据（比如只收到第一个字节）
+     * 2、收到了多个包合并在一起（粘包）
+     * 3、收到了某个包的一部分（丢包/分片）
+     */
 
     //长度
     unsigned short len, len0, len1;
@@ -1177,39 +1186,9 @@ void MainWindow::sendDataUpfileseg(const QString &file_path, qint64 start_bit, i
     sendJson["function"] = "upfileseg";
     sendJson["fileid"] = m_fileid;
     sendJson["md5"] = seg_md5.toStdString();
-    //sendJson["content"] = seg_content_std;
     sendJson["length"] = seg_content_std.length();
 
-    //std::string recv_seg = sendJson["content"].asString();
-    //qDebug() << "recv_seg len: "<< recv_seg.size();
-
-    //### 用int数组存字符
-#if 0
-    for(int i = 0; i < len; i++){
-        sendJson["content"][i] = int(seg_ba[i]);
-    }
-#endif
     QByteArray sendba = sendJson.toStyledString().data();
-    //ui->txtSend->setText(sendbuf);
-
-#if 0
-    Json::CharReaderBuilder reader;
-    Json::Value recvJson;
-    JSONCPP_STRING errs;
-    std::stringstream ss(sendbuf.toStdString());
-    bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
-    int std_len = recvJson["content"].asString().length();
-    QString msg = "sbuf len :" + QString::number(sendJson.toStyledString().length())
-            + ",data len:" + QString::number(sendbuf.length())
-            + ",rbuf len:" + QString::number(recvJson.toStyledString().length())
-            + ",send len:" + QString::number(sendJson["content"].asString().length())
-            + ",recv len:" + QString::number(recvJson["content"].asString().length());
-    for(int i = 0; i < std_len; i++){
-        std::cout << int(recvJson["content"].asString()[i]) <<" ";
-    }
-    QMessageBox::warning(nullptr, "title", msg);
-#endif
-
     sendFileData(sendba, seg_ba);     //发送数据
 }
 

@@ -166,7 +166,7 @@ void FormFolder::onFileChanged(const QString &path)
     }
     else {
         qDebug() << CStr2LocalQStr("修改文件！") << path;
-        //修改后，变为空则删除，非空则上传
+        //修改后，文件变为空（size==0）则删除，非空则上传
         int file_len = fileInfo.size();
         /*
         int start = m_root_dir.length() + 1;    //截取相对路径
@@ -446,6 +446,7 @@ void FormFolder::SyncQDequeue()
     //写日志
     QString mode_str = getModeStr(temp_sync.mode);
     QString out_str = temp_sync.path + " : " + mode_str + " END";
+    // Q: 远程同步的 path 不一定是 toLocal8Bit 编码？
     WriteSyncLog(out_str.toLocal8Bit());
 
     //处理同步请求

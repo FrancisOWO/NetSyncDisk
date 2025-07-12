@@ -51,7 +51,7 @@ QString QBa2MD5(const QByteArray &barray)
 QString QStr2MD5(const QString &str)
 {
     QByteArray ba = QCryptographicHash::hash(
-                str.toLatin1(), QCryptographicHash::Md5);
+                str.toUtf8(), QCryptographicHash::Md5);
     return ba.toHex();
 }
 
