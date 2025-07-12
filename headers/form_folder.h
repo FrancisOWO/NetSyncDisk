@@ -103,7 +103,7 @@ private Q_SLOTS:
     void updateAutoUpdFlag();
 
 Q_SIGNALS:
-    void banded(const QString &local_dir, const QString &remote_dir);
+    void bound(const QString &local_dir, const QString &remote_dir);
 
     void upfile(const QString &file_path);
 

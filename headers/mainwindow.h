@@ -114,7 +114,7 @@ private Q_SLOTS:
     void clearUpfile();
 
     //绑定目录
-    void WriteBandLog(const QString &local_dir, const QString &remote_dir);
+    void WriteBindLog(const QString &local_dir, const QString &remote_dir);
 
     void connectServer();       //连接服务器
     void disconnectServer();    //断开连接

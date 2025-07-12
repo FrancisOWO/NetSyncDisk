@@ -141,7 +141,7 @@
        </widget>
       </item>
       <item row="0" column="2">
-       <widget class="QPushButton" name="pbtnBandLocalDir">
+       <widget class="QPushButton" name="pbtnBindLocalDir">
         <property name="minimumSize">
          <size>
           <width>0</width>

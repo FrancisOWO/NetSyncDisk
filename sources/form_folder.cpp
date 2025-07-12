@@ -54,7 +54,7 @@ void FormFolder::InitConnections()
 {
     //选择目录
     connect(ui->pbtnChoLocalDir, &QPushButton::clicked, this, &FormFolder::chooseRootDir);
-    connect(ui->pbtnBandLocalDir, &QPushButton::clicked, this, &FormFolder::changeRootDir);
+    connect(ui->pbtnBindLocalDir, &QPushButton::clicked, this, &FormFolder::changeRootDir);
     connect(ui->pbtnUpdFolder, &QPushButton::clicked, this, &FormFolder::updateFolderTree);
     //选择文件
     connect(ui->pbtnChooseFile, &QPushButton::clicked, this, &FormFolder::chooseFile);
@@ -115,7 +115,7 @@ void FormFolder::changeRootDir()
         QString title = CStr2LocalQStr("提示");
         QString info = path + CStr2LocalQStr("目录绑定成功！");
         QMessageBox::information(nullptr, title, info);
-        Q_EMIT banded(path, "/");
+        Q_EMIT bound(path, "/");
         //目录监视
         m_pFilesysWatcher->removePath(m_root_dir);  //删除原目录
         m_root_dir = path;

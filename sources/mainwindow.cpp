@@ -114,7 +114,7 @@ void MainWindow::InitConnections()
     connect(ui->pbtnAskPath, &QPushButton::clicked, this, &MainWindow::sendDataAskAllPath);
 
     //绑定目录
-    connect(m_pFolder, &FormFolder::banded, this, &MainWindow::WriteBandLog);
+    connect(m_pFolder, &FormFolder::bound, this, &MainWindow::WriteBindLog);
 
     //上传文件
     connect(m_pFolder, &FormFolder::upfile, this, &MainWindow::sendDataUpfile);
@@ -319,20 +319,20 @@ void MainWindow::WriteConnectRec(const QString &local_dir, const QString &remote
         WriteConnectLog(str);
         return;
     }
-    QString band_rec = local_dir + "|" + remote_dir;
-    QByteArray band_ba = band_rec.toLocal8Bit();
-    band_ba += "\n";
-    file_out.write(band_ba, band_ba.length());
+    QString bind_rec = local_dir + "|" + remote_dir;
+    QByteArray bind_ba = bind_rec.toLocal8Bit();
+    bind_ba += "\n";
+    file_out.write(bind_ba, bind_ba.length());
     file_out.close();
     return;
 }
 
 //绑定目录
-void MainWindow::WriteBandLog(const QString &local_dir, const QString &remote_dir)
+void MainWindow::WriteBindLog(const QString &local_dir, const QString &remote_dir)
 {
     QString write_str = CStr2LocalQStr("设置绑定目录[userid:") + QString::number(m_userid) + "] ";
-    QString band_rec = local_dir + "|" + remote_dir;
-    write_str += band_rec;
+    QString bind_rec = local_dir + "|" + remote_dir;
+    write_str += bind_rec;
     WriteConnectLog(write_str);
     WriteConnectRec(local_dir, remote_dir);
 }
