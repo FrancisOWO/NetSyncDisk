@@ -1,3 +1,6 @@
+# vscode
+.vscode/
+
 # log files
 *.rec
 *.log
@@ -14,6 +17,7 @@
 *.dll
 *.dylib
 
+/build/
 /debug
 /release
 
