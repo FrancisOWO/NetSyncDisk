@@ -4,6 +4,9 @@
 #include <QMainWindow>
 
 #include <QString>
+#include <QMap>
+
+#include <functional>
 
 #include "form_register.h"
 #include "form_login.h"
@@ -66,11 +69,16 @@ private:
     QString m_username;
     QString m_filepath;
 
+    using JsonHandler = std::function<void(const Json::Value&)>;
+    QMap<QString, JsonHandler> m_funcMap;   // º¯ÊýÓ³Éä±í
+
 private:
     void InitMembers();
     void InitConnections();
     void InitSocket();
     void DestroySocket();
+
+    void InitFuncMap();
 
     int getRealpathLen(const QString &path);
 

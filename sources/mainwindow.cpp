@@ -208,6 +208,19 @@ void MainWindow::DestroySocket()
     delete  m_server_sock;
 }
 
+void MainWindow::InitFuncMap()
+{
+    m_funcMap["register"] = [this](const Json::Value &recvJson){ parseJsonRegister(recvJson); };
+    m_funcMap["login"] = [this](const Json::Value &recvJson){ parseJsonLogin(recvJson); };
+    m_funcMap["upfile"] = [this](const Json::Value &recvJson){ parseJsonUpfile(recvJson); };
+    m_funcMap["upfileseg"] = [this](const Json::Value &recvJson){ parseJsonUpfileseg(recvJson); };
+    m_funcMap["rmfileok"] = [this](const Json::Value &recvJson){ parseJsonRmfileOK(recvJson); };
+    m_funcMap["mkdirok"] = [this](const Json::Value &recvJson){ parseJsonMkdirOK(recvJson); };
+    m_funcMap["rmdirok"] = [this](const Json::Value &recvJson){ parseJsonRmdirOK(recvJson); };
+    m_funcMap["askallpath"] = [this](const Json::Value &recvJson){ parseJsonAskAllPath(recvJson); };
+    m_funcMap["downfile"] = [this](const Json::Value &recvJson){ parseJsonDownfile(recvJson); };
+}
+
 int MainWindow::getRealpathLen(const QString &path)
 {
     int base_len = m_pFolder->getRootDir().length() + 1;
@@ -299,12 +312,14 @@ void MainWindow::WriteConnectLog(const QString &str)
         MyMessageBox::critical("错误","connect文件打开失败！");
         return;
     }
+    // todo: 封装时间戳函数
     //加时间戳
     QString time_str = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
     QByteArray write_ba = "[" + time_str.toLocal8Bit() + "]";
     write_ba += str.toLocal8Bit();
     write_ba += "\n";
 
+    // todo: 封装写入函数
     qfout.seek(qfout.size());
     qfout.write(write_ba, write_ba.length());
     qfout.close();
@@ -386,38 +401,10 @@ void MainWindow::disconnectServer()
 //发送文件数据
 void MainWindow::sendFileData(const QByteArray &json_ba, const QByteArray &content_ba)
 {
-    //QString content = ui->txtSend->toPlainText();
-    unsigned short len = (unsigned short)(json_ba.length() + content_ba.length() + 1);
-    //qDebug() << "pack len:" << len;
-    QByteArray str_ba;
-    //长度
-    str_ba += (uchar)(0x00ff & len);
-    str_ba += (uchar)((0xff00 & len) >> 8);
-    //内容
-    str_ba += json_ba;
-    str_ba += "+";     //防止文件中有注释被json解析，用一个字符隔开
-    //qDebug() << str;
+    //防止文件中有注释被json解析，用一个字符隔开
+    QByteArray full_ba = json_ba + "+" + content_ba;
+    sendData(full_ba);
 
-    // !!! toLatin1() 只能转换 ascii 字符，应该用 toUtf8()
-    //QByteArray ba = str.toUtf8();
-    str_ba += content_ba;
-#ifdef DEBUG_COUT
-    qDebug() <<"ba len: "<< ba.length();
-    QString msg_str = "ba_len :" + QString::number(ba.length())
-            + ", json_len:" + QString::number(json_str.length())
-            + ", content_len:" + QString::number(content_ba.length());
-    //QMessageBox::critical(nullptr, "!!!", msg_str);
-#endif
-    m_server_sock->write(str_ba);
-    //m_server_sock->write(content_ba);
-#ifdef DEBUG_COUT
-    for(int i = 0; i < content_ba.length(); i++){
-        std::cout << int((unsigned char)content_ba[i]) <<" ";
-    }
-    std::cout << endl;
-
-    qDebug() <<"json len :" << json_str.length() <<"latin len:" << content_ba.length();
-#endif
 #if 0
     Json::CharReaderBuilder reader;
     Json::Value recvJson;
@@ -438,16 +425,10 @@ void MainWindow::sendFileData(const QByteArray &json_ba, const QByteArray &conte
 void MainWindow::sendDataFromBox()
 {
     QString content = ui->txtSend->toPlainText();
-    unsigned short len = (unsigned short)(content.length());
-    QByteArray str_ba;
-    //长度
-    str_ba += (uchar)(0x00ff & len);
-    str_ba += (uchar)((0xff00 & len) >> 8);
-    //内容
+    // !!! toLatin1() 只能转换 ascii 字符，应该用 toUtf8()
     // !!! QString 是 utf16，QByteArray 需包含编码信息 utf8
-    str_ba += content.toUtf8();
-    //qDebug() << str;
-    m_server_sock->write(str_ba);
+    QByteArray content_ba = content.toUtf8();
+    sendData(content_ba);
 }
 
 //发送数据
@@ -470,23 +451,6 @@ void MainWindow::sendData(const QByteArray &content_ba)
     }
 }
 
-//发送数据(QString)
-#if 0
-void MainWindow::sendData(const QString &content)
-{
-    //QString content = ui->txtSend->toPlainText();
-    unsigned short len = (unsigned short)(content.length());
-    QString str;
-    //长度
-    str += (uchar)(0x00ff & len);
-    str += (uchar)((0xff00 & len) >> 8);
-    //内容
-    str += content;
-    //qDebug() << str;
-    m_server_sock->write(str.toUtf8());
-}
-#endif
-
 //解析从服务端收到的消息
 void MainWindow::parseJson(const QByteArray &str_ba)
 {
@@ -500,41 +464,22 @@ void MainWindow::parseJson(const QByteArray &str_ba)
         return;
     }
 
-    qDebug() << "function:" << recvJson["function"].asCString();
-
-    //根据function进行解析
-    if(recvJson["function"] == "register"){
-        parseJsonRegister(recvJson);
-    }
-    else if(recvJson["function"] == "login"){
-        parseJsonLogin(recvJson);
-    }
-    else if(recvJson["function"] == "upfile"){
-        parseJsonUpfile(recvJson);
-    }
-    else if(recvJson["function"] ==  "upfileseg"){
-        parseJsonUpfileseg(recvJson);
-    }
-    else if(recvJson["function"] ==  "rmfileok"){
-        parseJsonRmfileOK(recvJson);
-    }
-    else if(recvJson["function"] ==  "mkdirok"){
-        parseJsonMkdirOK(recvJson);
-    }
-    //rmdirok已经和rmfileok合并
-    else if(recvJson["function"] ==  "rmdirok"){
-        parseJsonRmdirOK(recvJson);
-    }
-    else if(recvJson["function"] ==  "askallpath"){
-        parseJsonAskAllPath(recvJson);
-    }
-    else if(recvJson["function"] ==  "downfile"){
-        parseJsonDownfile(recvJson);
-    }
-    else if(recvJson["function"] ==  "downfileseg"){
+    // 根据function进行解析
+    QString funcName = recvJson["function"].asCString();
+    qDebug() << "function:" << funcName;
+    // 双参数
+    if(funcName == "downfileseg"){
         parseJsonDownfileseg(recvJson, str_ba);
+        return;
     }
-
+    // 单参数
+    auto it = m_funcMap.find(funcName);
+    if(it != m_funcMap.end()){
+        it.value()(recvJson);
+    }
+    else {
+        qDebug() << "ERROR: No such function!";
+    }
 }
 
 //注册
@@ -744,7 +689,7 @@ void MainWindow::parseJsonDownfileseg(const Json::Value &recvJson, const QByteAr
 
     //本次下载的内容
     int size = recvJson["size"].asInt();
-    int offset = recvJson.toStyledString().size() + 1;
+    int offset = int(recvJson.toStyledString().size()) + 1;
     QByteArray content_ba = str_ba.mid(offset);
     qDebug() <<"downseg len: "<< content_ba.length();
     if(size != content_ba.length()){
