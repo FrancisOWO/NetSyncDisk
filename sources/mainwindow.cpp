@@ -290,6 +290,7 @@ void MainWindow::renameFileWithoutTmp()
         log_str += new_filepath;
         WriteConnectLog(log_str);
 
+        // todo: 用户选择是否覆盖文件
         MyMessageBox::warning("警告", "存在冲突，覆盖同名文件！");
         QFile::remove(new_filepath);
         QFile::rename(m_filepath, new_filepath);
@@ -435,14 +436,9 @@ void MainWindow::sendDataFromBox()
 void MainWindow::sendData(const QByteArray &content_ba)
 {
     //QString content = ui->txtSend->toPlainText();
-    unsigned short len = (unsigned short)(content_ba.length());
     QByteArray str_ba;
-    //长度
-    str_ba += (uchar)(0x00ff & len);
-    str_ba += (uchar)((0xff00 & len) >> 8);
-    //内容
-    str_ba += content_ba;
-    //qDebug() << str;
+    str_ba += getByteArrayLenBa(content_ba);    //长度
+    str_ba += content_ba;   // 内容
     m_server_sock->write(str_ba);
 
     //登出，断开连接
@@ -460,11 +456,12 @@ void MainWindow::parseJson(const QByteArray &str_ba)
     std::stringstream ss(str_ba.toStdString());
     bool res = Json::parseFromStream(reader, ss, &recvJson, &errs);
     if (!res || !errs.empty()) {
+        // todo: 具体什么错误？
         qDebug() << "recv error!";
         return;
     }
 
-    // 根据function进行解析
+    // 根据 function 字段调用对应函数
     QString funcName = recvJson["function"].asCString();
     qDebug() << "function:" << funcName;
     // 双参数

@@ -3,6 +3,8 @@
 #include <QString>
 #include <QByteArray>
 
+QByteArray getByteArrayLenBa(const QByteArray& input_ba);
+
 QString Num2ByteNum(const int &num);
 
 QString getByteNumRatio(const int &num1, const int &num2);

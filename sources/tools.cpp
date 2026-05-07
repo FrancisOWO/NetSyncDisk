@@ -5,8 +5,19 @@
 #include <QMessageBox>
 #include <QCryptographicHash>
 #include <QDebug>
+
 #include <fstream>
 using namespace std;
+
+
+QByteArray getByteArrayLenBa(const QByteArray& input_ba)
+{
+    unsigned short len = (unsigned short)(input_ba.length());
+    QByteArray len_ba;
+    len_ba += (uchar)(0x00ff & len);
+    len_ba += (uchar)((0xff00 & len) >> 8);
+    return len_ba;
+}
 
 QString Num2ByteNum(const int &num)
 {
